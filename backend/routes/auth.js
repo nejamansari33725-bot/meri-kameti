@@ -24,7 +24,7 @@ router.post('/register', (req, res) => {
 
   const token = jwt.sign(
     { id: result.lastInsertRowid, name, phone, role: 'member' },
-    process.env.JWT_SECRET,
+    (process.env.JWT_SECRET || 'mera_kameti_fallback_secret_2024'),
     { expiresIn: '7d' }
   );
   res.json({ message: 'Registration successful!', token, role: 'member', name });
@@ -49,7 +49,7 @@ router.post('/login', (req, res) => {
   }
   const token = jwt.sign(
     { id: user.id, name: user.name, phone: user.phone, role: user.role },
-    process.env.JWT_SECRET,
+    (process.env.JWT_SECRET || 'mera_kameti_fallback_secret_2024'),
     { expiresIn: '7d' }
   );
   res.json({ message: 'Login successful!', token, role: user.role, name: user.name });
@@ -61,7 +61,7 @@ router.get('/me', (req, res) => {
   if (!authHeader) return res.status(401).json({ error: 'Token nahi mila.' });
   try {
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, (process.env.JWT_SECRET || 'mera_kameti_fallback_secret_2024'));
     const user = db.prepare('SELECT id, name, phone, email, role, status, created_at FROM users WHERE id = ?').get(decoded.id);
     res.json({ data: user });
   } catch {
