@@ -1,45 +1,38 @@
+// Production server - env vars injected by Railway
+// For local: set env vars manually
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// Railway injects env vars directly - no dotenv needed in production
-// For local dev, set vars manually or use dotenv optionally
-try { require('dotenv').config(); } catch(e) {}
+if (process.env.NODE_ENV !== 'production') {
+  try { require('dotenv').config(); } catch(e) { /* ok */ }
+}
 
-// Initialize DB (creates tables + seeds admin)
 require('./database');
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve uploaded screenshots
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/members', require('./routes/members'));
 app.use('/api/committee', require('./routes/committee'));
 app.use('/api/reports', require('./routes/reports'));
 
-// Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Mera Kameti server chal raha hai! 🟢' });
+  res.json({ status: 'ok', message: 'Mera Kameti chal raha hai! 🟢' });
 });
 
-// Serve React frontend build (production)
 const frontendBuild = path.join(__dirname, '../frontend/dist');
 app.use(express.static(frontendBuild));
 app.get('*', (req, res) => {
-  const indexPath = path.join(frontendBuild, 'index.html');
-  res.sendFile(indexPath);
+  res.sendFile(path.join(frontendBuild, 'index.html'));
 });
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: err.message || 'Server error.' });
@@ -47,6 +40,6 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Mera Kameti server port ${PORT} pe chal raha hai`);
-  console.log(`📱 Admin Login: phone=0000000000, password=admin123`);
+  console.log(`🚀 Mera Kameti port ${PORT} pe chal raha hai`);
+  console.log(`📱 Admin: 0000000000 / admin123`);
 });
