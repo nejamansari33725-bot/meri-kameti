@@ -1,7 +1,10 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+
+// Railway injects env vars directly - no dotenv needed in production
+// For local dev, set vars manually or use dotenv optionally
+try { require('dotenv').config(); } catch(e) {}
 
 // Initialize DB (creates tables + seeds admin)
 require('./database');
@@ -32,7 +35,8 @@ app.get('/api/health', (req, res) => {
 const frontendBuild = path.join(__dirname, '../frontend/dist');
 app.use(express.static(frontendBuild));
 app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendBuild, 'index.html'));
+  const indexPath = path.join(frontendBuild, 'index.html');
+  res.sendFile(indexPath);
 });
 
 // Error handler
