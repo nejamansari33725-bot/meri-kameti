@@ -1,14 +1,13 @@
+try { require('dotenv').config(); } catch(e) {}
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, 'kameti.db'));
+const db = new Database(path.join(__dirname, '../kameti.db'));
 
-// Enable WAL mode for better performance
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
-// Create tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,7 +48,6 @@ db.exec(`
   );
 `);
 
-// Seed admin user if not exists
 const adminExists = db.prepare("SELECT id FROM users WHERE phone = '0000000000'").get();
 if (!adminExists) {
   const hashedPassword = bcrypt.hashSync('admin123', 10);
