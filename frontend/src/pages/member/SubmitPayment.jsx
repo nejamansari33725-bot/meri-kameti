@@ -14,6 +14,16 @@ export default function SubmitPayment() {
   const [screenshot, setScreenshot] = useState(null)
   const [preview, setPreview] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const upiId = 'ansarinizam57970-2@oksbi'
+
+  const copyUpi = () => {
+    navigator.clipboard.writeText(upiId)
+    setCopied(true)
+    toast.success('UPI ID कॉपी हो गई! ✅')
+    setTimeout(() => setCopied(false), 2500)
+  }
 
   const handleFileChange = (e) => {
     const file = e.target.files[0]
@@ -25,7 +35,7 @@ export default function SubmitPayment() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.amount) return toast.error('Amount daalna zaroori hai.')
+    if (!form.amount) return toast.error('Amount डालना ज़रूरी है।')
 
     setLoading(true)
     try {
@@ -41,12 +51,12 @@ export default function SubmitPayment() {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 
-      toast.success('Payment submit ho gaya! Admin approve karega. ✅')
+      toast.success('Payment सबमिट हो गया! Admin अप्रूव करेगा। ✅')
       setForm({ amount: '', reference_no: '', note: '', month: now.getMonth() + 1, year: now.getFullYear() })
       setScreenshot(null)
       setPreview(null)
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Submit fail ho gaya.')
+      toast.error(err.response?.data?.error || 'Submit फेल हो गया।')
     } finally {
       setLoading(false)
     }
@@ -55,12 +65,20 @@ export default function SubmitPayment() {
   const months = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December']
 
-  return (
-    <div className="max-w-lg mx-auto p-4">
-      <div className="card">
-        <h1 className="text-2xl font-bold text-primary-700 mb-6">💰 Payment Submit Karein</h1>
+  const upiPayLink = `upi://pay?pa=${upiId}&pn=Nizam%20Ansari&cu=INR${form.amount ? `&am=${form.amount}` : ''}`
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+  return (
+    <div className="max-w-xl mx-auto p-4 space-y-6">
+      {/* Payment Submission Form */}
+      <div className="card shadow-sm">
+        <h1 className="text-2xl font-bold text-primary-700 mb-1 flex items-center gap-2">
+          <span>💰</span> Payment Submit Karein
+        </h1>
+        <p className="text-xs text-gray-500 mb-5">
+          पैसे भेजने के बाद नीचे स्क्रीनशॉट और रिफरेंस नंबर सबमिट करें
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Month & Year */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -79,40 +97,59 @@ export default function SubmitPayment() {
 
           {/* Amount */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">💵 Amount (Rs.)</label>
-            <input type="number" className="input" placeholder="5000" min="1" value={form.amount}
-              onChange={e => setForm({ ...form, amount: e.target.value })} required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">💵 Amount (₹)</label>
+            <input
+              type="number"
+              className="input"
+              placeholder="e.g. 5000"
+              min="1"
+              value={form.amount}
+              onChange={e => setForm({ ...form, amount: e.target.value })}
+              required
+            />
           </div>
 
           {/* Reference */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">🔢 Reference Number / Transaction ID</label>
-            <input type="text" className="input" placeholder="TXN123456789" value={form.reference_no}
-              onChange={e => setForm({ ...form, reference_no: e.target.value })} />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              🔢 Transaction ID / UTR / Reference No.
+            </label>
+            <input
+              type="text"
+              className="input"
+              placeholder="e.g. 428719283749"
+              value={form.reference_no}
+              onChange={e => setForm({ ...form, reference_no: e.target.value })}
+            />
           </div>
 
           {/* Screenshot */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">📸 Payment Screenshot</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              📸 Payment Screenshot (स्क्रीनशॉट)
+            </label>
             <div
-              className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-primary-400 transition-colors cursor-pointer"
+              className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-primary-400 transition-colors cursor-pointer bg-gray-50/50"
               onClick={() => document.getElementById('screenshot').click()}
             >
               {preview ? (
-                <img src={preview} alt="Screenshot" className="max-h-48 mx-auto rounded-lg object-contain" />
+                <img src={preview} alt="Screenshot" className="max-h-48 mx-auto rounded-lg object-contain shadow-sm" />
               ) : (
                 <div className="text-gray-400">
-                  <div className="text-4xl mb-2">📷</div>
-                  <p className="text-sm">Screenshot yahan drag karein ya click karein</p>
-                  <p className="text-xs text-gray-300 mt-1">JPG, PNG, GIF — max 5MB</p>
+                  <div className="text-4xl mb-1">📷</div>
+                  <p className="text-sm font-medium text-gray-600">पेमेंट का स्क्रीनशॉट यहाँ अपलोड करें</p>
+                  <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP — क्लिक करें या ड्रैग करें</p>
                 </div>
               )}
               <input id="screenshot" type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
             </div>
             {preview && (
-              <button type="button" onClick={() => { setScreenshot(null); setPreview(null) }}
-                className="text-red-500 text-sm mt-1 hover:underline">
-                ✕ Remove screenshot
+              <button
+                type="button"
+                onClick={() => { setScreenshot(null); setPreview(null) }}
+                className="text-red-500 text-xs mt-1 hover:underline font-medium"
+              >
+                ✕ दूसरा स्क्रीनशॉट चुनें
               </button>
             )}
           </div>
@@ -120,14 +157,87 @@ export default function SubmitPayment() {
           {/* Note */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">📝 Note (optional)</label>
-            <textarea className="input" placeholder="Koi note ya comment..." rows={2} value={form.note}
-              onChange={e => setForm({ ...form, note: e.target.value })} />
+            <textarea
+              className="input"
+              placeholder="कोई टिप्पणी या मैसेज..."
+              rows={2}
+              value={form.note}
+              onChange={e => setForm({ ...form, note: e.target.value })}
+            />
           </div>
 
-          <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-base">
-            {loading ? '⏳ Submit ho raha hai...' : '✅ Payment Submit Karein'}
+          <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-base shadow-md">
+            {loading ? '⏳ सबमिट हो रहा है...' : '✅ Payment सबमिट करें'}
           </button>
         </form>
+      </div>
+
+      {/* QR Code & UPI Details Box (Placed Below as requested) */}
+      <div className="card bg-gradient-to-br from-emerald-50 via-white to-green-50 border border-emerald-200 shadow-sm space-y-4">
+        <div className="text-center">
+          <span className="inline-block bg-emerald-100 text-emerald-800 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider mb-2">
+            📲 Scan & Pay (ऑनलाइन भुगतान)
+          </span>
+          <h2 className="text-xl font-bold text-gray-900">
+            कमेटी का पैसा इस QR या UPI पर भेजें
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Google Pay, PhonePe, Paytm या किसी भी UPI ऐप से स्कैन करें
+          </p>
+        </div>
+
+        {/* QR Code Container */}
+        <div className="flex justify-center">
+          <div className="bg-white p-3 rounded-2xl shadow-md border border-emerald-100 max-w-[280px] w-full text-center">
+            <img
+              src="/upi-qr.png"
+              alt="Nizam Ansari UPI QR Code"
+              className="w-full h-auto rounded-xl mx-auto object-contain"
+            />
+          </div>
+        </div>
+
+        {/* UPI ID Box with One-Click Copy */}
+        <div className="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-sm space-y-2">
+          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block text-center">
+            UPI ID
+          </span>
+          
+          <div className="flex items-center justify-between gap-2 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200">
+            <span className="font-mono font-bold text-sm text-emerald-950 truncate select-all">
+              {upiId}
+            </span>
+            <button
+              type="button"
+              onClick={copyUpi}
+              className={`shrink-0 text-xs px-3 py-1.5 rounded-md font-bold transition-all shadow-sm ${
+                copied
+                  ? 'bg-green-600 text-white'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+            >
+              {copied ? '✓ कॉपी हुआ' : '📋 Copy'}
+            </button>
+          </div>
+
+          {/* Quick Pay Button on Mobile */}
+          <div className="pt-1 text-center">
+            <a
+              href={upiPayLink}
+              className="inline-flex items-center justify-center gap-1.5 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-lg text-xs font-bold transition-colors shadow-sm"
+            >
+              <span>⚡</span> UPI App से सीधे Pay करें (GPay / PhonePe / Paytm)
+            </a>
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="text-xs text-gray-600 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 space-y-1">
+          <p className="font-bold text-emerald-900 mb-1">📌 पेमेंट करने का तरीका:</p>
+          <p>1. ऊपर दिया गया QR कोड स्कैन करें या UPI ID पर पेमेंट करें।</p>
+          <p>2. पेमेंट सफल होने के बाद उसका <strong>Screenshot</strong> लें।</p>
+          <p>3. ऊपर वाले फॉर्म में Amount और Screenshot अपलोड करके <strong>"Payment सबमिट करें"</strong> बटन दबाएं।</p>
+        </div>
       </div>
     </div>
   )
