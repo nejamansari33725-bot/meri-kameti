@@ -25,6 +25,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     amount REAL NOT NULL,
+    late_fine REAL DEFAULT 0,
     screenshot_path TEXT,
     reference_no TEXT,
     note TEXT,
@@ -48,14 +49,34 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (winner_user_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  );
 `);
 
 // Add payout_amount column if table was created in an older version
 try {
   db.exec(`ALTER TABLE committee_rounds ADD COLUMN payout_amount REAL DEFAULT 0;`);
-} catch (e) {
-  // Column already exists
-}
+} catch (e) {}
+
+// Add late_fine column to payments if not exists
+try {
+  db.exec(`ALTER TABLE payments ADD COLUMN late_fine REAL DEFAULT 0;`);
+} catch (e) {}
+
+// Seed default settings if not exists
+const defaultSettings = [
+  ['committee_name', 'Mera Kameti'],
+  ['upi_id', 'ansarinizam57970-2@oksbi'],
+  ['upi_name', 'Nizam Ansari'],
+  ['qr_code_url', '/upi-qr.png'],
+  ['default_late_fine', '0']
+];
+
+const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
+defaultSettings.forEach(([k, v]) => insertSetting.run(k, v));
 
 // Seed admin user if not exists
 const adminExists = db.prepare("SELECT id FROM users WHERE phone = '0000000000'").get();
