@@ -15,23 +15,26 @@ router.get('/rounds', authMiddleware, (req, res) => {
   res.json({ data: rounds });
 });
 
-// Get current month summary
+// Get current month and overall committee summary
 router.get('/summary', authMiddleware, (req, res) => {
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
+  // This month collected
   const totalCollected = db.prepare(`
     SELECT COALESCE(SUM(amount), 0) as total
     FROM payments
     WHERE month = ? AND year = ? AND status = 'approved'
   `).get(month, year);
 
+  // This month pending
   const pendingCount = db.prepare(`
     SELECT COUNT(*) as count FROM payments
     WHERE month = ? AND year = ? AND status = 'pending'
   `).get(month, year);
 
+  // This month winner
   const winner = db.prepare(`
     SELECT r.*, u.name as winner_name
     FROM committee_rounds r
@@ -45,6 +48,18 @@ router.get('/summary', authMiddleware, (req, res) => {
     WHERE month = ? AND year = ? AND status = 'approved'
   `).get(month, year);
 
+  // Lifetime Overall Credit (All approved payments)
+  const allCredit = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'approved'
+  `).get();
+
+  // Lifetime Overall Debit (All payouts to winners)
+  const allDebit = db.prepare(`
+    SELECT COALESCE(SUM(CASE WHEN payout_amount > 0 THEN payout_amount ELSE total_collected END), 0) as total
+    FROM committee_rounds
+    WHERE winner_user_id IS NOT NULL
+  `).get();
+
   res.json({
     data: {
       month, year,
@@ -52,36 +67,44 @@ router.get('/summary', authMiddleware, (req, res) => {
       pendingCount: pendingCount.count,
       winner: winner || null,
       totalMembers: totalMembers.count,
-      paidMembers: paidMembers.count
+      paidMembers: paidMembers.count,
+      overallTotalCredit: allCredit.total,
+      overallTotalDebit: allDebit.total,
+      overallNetBalance: allCredit.total - allDebit.total
     }
   });
 });
 
 // Assign winner for a month (admin)
 router.post('/rounds', authMiddleware, adminOnly, (req, res) => {
-  const { month, year, winner_user_id, notes } = req.body;
+  const { month, year, winner_user_id, payout_amount, notes } = req.body;
   if (!month || !year || !winner_user_id) {
     return res.status(400).json({ error: 'Month, year aur winner zaroori hain.' });
   }
 
+  // Get total collected for that month
+  const totalCollected = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total FROM payments
+    WHERE month = ? AND year = ? AND status = 'approved'
+  `).get(parseInt(month), parseInt(year));
+
+  const actualPayout = payout_amount && parseFloat(payout_amount) > 0 
+    ? parseFloat(payout_amount) 
+    : totalCollected.total;
+
   // Check if round already exists
   const existing = db.prepare('SELECT id FROM committee_rounds WHERE month = ? AND year = ?').get(parseInt(month), parseInt(year));
   if (existing) {
-    // Update existing
     db.prepare(`
-      UPDATE committee_rounds SET winner_user_id = ?, notes = ? WHERE month = ? AND year = ?
-    `).run(parseInt(winner_user_id), notes || null, parseInt(month), parseInt(year));
+      UPDATE committee_rounds 
+      SET winner_user_id = ?, total_collected = ?, payout_amount = ?, notes = ? 
+      WHERE month = ? AND year = ?
+    `).run(parseInt(winner_user_id), totalCollected.total, actualPayout, notes || null, parseInt(month), parseInt(year));
   } else {
-    // Get total collected for that month
-    const totalCollected = db.prepare(`
-      SELECT COALESCE(SUM(amount), 0) as total FROM payments
-      WHERE month = ? AND year = ? AND status = 'approved'
-    `).get(parseInt(month), parseInt(year));
-
     db.prepare(`
-      INSERT INTO committee_rounds (month, year, winner_user_id, total_collected, notes)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(parseInt(month), parseInt(year), parseInt(winner_user_id), totalCollected.total, notes || null);
+      INSERT INTO committee_rounds (month, year, winner_user_id, total_collected, payout_amount, notes)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(parseInt(month), parseInt(year), parseInt(winner_user_id), totalCollected.total, actualPayout, notes || null);
   }
 
   // Notify winner
@@ -89,10 +112,10 @@ router.post('/rounds', authMiddleware, adminOnly, (req, res) => {
   const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
   if (winner) {
-    notifyWhatsApp(winner.phone, `🎉 Mubarak ho ${winner.name}!\nAap is mahine (${monthNames[month]} ${year}) ki committee jeet gaye hain!\n- Mera Kameti`);
+    notifyWhatsApp(winner.phone, `🎉 Mubarak ho ${winner.name}!\nAap is mahine (${monthNames[month]} ${year}) ki committee jeet gaye hain!\nUthayi hui raashi: Rs. ${actualPayout}\n- Mera Kameti`);
   }
 
-  res.json({ message: `${winner?.name} ko winner set kar diya gaya!` });
+  res.json({ message: `${winner?.name} ko winner set kar diya gaya! (Rs. ${actualPayout})` });
 });
 
 // Get members with their payment status for a specific month (for winner selection)
@@ -102,7 +125,8 @@ router.get('/members-status', authMiddleware, adminOnly, (req, res) => {
 
   const members = db.prepare(`
     SELECT u.id, u.name, u.phone,
-      p.amount, p.status as payment_status, p.reference_no
+      p.amount, p.status as payment_status, p.reference_no,
+      (SELECT COUNT(id) FROM committee_rounds WHERE winner_user_id = u.id) as previous_wins
     FROM users u
     LEFT JOIN payments p ON u.id = p.user_id AND p.month = ? AND p.year = ? AND p.status = 'approved'
     WHERE u.role = 'member' AND u.status = 'active'
