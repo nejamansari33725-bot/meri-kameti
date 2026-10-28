@@ -35,12 +35,17 @@ router.get('/monthly', authMiddleware, adminOnly, (req, res) => {
     WHERE r.month = ? AND r.year = ?
   `).get(m, y);
 
+  const payout = winner 
+    ? (winner.payout_amount > 0 ? winner.payout_amount : winner.total_collected)
+    : 0;
+
   res.json({
     data: {
       month: m, year: y,
       monthName: MONTH_NAMES[m],
       totalCollected: totalApproved.total,
       winner: winner || null,
+      payoutAmount: payout,
       payments
     }
   });
@@ -74,6 +79,10 @@ router.get('/pdf', authMiddleware, adminOnly, (req, res) => {
     WHERE r.month = ? AND r.year = ?
   `).get(m, y);
 
+  const payout = winner 
+    ? (winner.payout_amount > 0 ? winner.payout_amount : winner.total_collected)
+    : 0;
+
   // Generate PDF
   const doc = new PDFDocument({ margin: 40 });
   res.setHeader('Content-Type', 'application/pdf');
@@ -82,18 +91,19 @@ router.get('/pdf', authMiddleware, adminOnly, (req, res) => {
 
   // Header
   doc.fontSize(22).fillColor('#16a34a').text('Mera Kameti', { align: 'center' });
-  doc.fontSize(14).fillColor('#333').text(`Monthly Report: ${MONTH_NAMES[m]} ${y}`, { align: 'center' });
+  doc.fontSize(14).fillColor('#333').text(`Monthly Report & Ledger: ${MONTH_NAMES[m]} ${y}`, { align: 'center' });
   doc.moveDown();
 
   // Summary box
   doc.fontSize(12).fillColor('#000');
-  doc.text(`Total Collected: Rs. ${totalApproved.total.toFixed(2)}`);
-  doc.text(`Total Payments: ${payments.length}`);
-  doc.text(`Winner: ${winner ? winner.winner_name : 'Not announced yet'}`);
+  doc.text(`Total Credit (Approved Collection): Rs. ${totalApproved.total.toFixed(2)}`);
+  doc.text(`Total Debit (Payout to Winner): Rs. ${payout.toFixed(2)}`);
+  doc.text(`Winner: ${winner ? `${winner.winner_name} (Rs. ${payout})` : 'Not announced yet'}`);
+  doc.text(`Total Submissions: ${payments.length}`);
   doc.moveDown();
 
   // Table header
-  doc.fontSize(11).fillColor('#16a34a').text('Member Payments:', { underline: true });
+  doc.fontSize(11).fillColor('#16a34a').text('Member Payments / Ledger:', { underline: true });
   doc.fillColor('#000').moveDown(0.5);
 
   payments.forEach((p, i) => {
