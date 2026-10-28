@@ -3,10 +3,22 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 
+const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December']
+
 export default function Members() {
+  const now = new Date()
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+
+  // Late Fine Modal state
+  const [fineModal, setFineModal] = useState(null) // { memberId, memberName, phone }
+  const [fineAmount, setFineAmount] = useState('')
+  const [fineMonth, setFineMonth] = useState(now.getMonth() + 1)
+  const [fineYear, setFineYear] = useState(now.getFullYear())
+  const [fineReason, setFineReason] = useState('')
+  const [submittingFine, setSubmittingFine] = useState(false)
 
   const fetchMembers = () => {
     api.get('/members').then(res => setMembers(res.data.data)).finally(() => setLoading(false))
@@ -35,6 +47,31 @@ export default function Members() {
       fetchMembers()
     } catch (err) {
       toast.error(err.response?.data?.error || 'सदस्य को हटाने में त्रुटि आई।')
+    }
+  }
+
+  const handleAddFine = async (e) => {
+    e.preventDefault()
+    if (!fineAmount || parseFloat(fineAmount) <= 0) {
+      return toast.error('कृपया सही लेट फाइन राशि दर्ज करें।')
+    }
+    setSubmittingFine(true)
+    try {
+      const res = await api.post(`/members/${fineModal.memberId}/late-fine`, {
+        amount: parseFloat(fineAmount),
+        month: fineMonth,
+        year: fineYear,
+        reason: fineReason
+      })
+      toast.success(res.data?.message || 'लेट फाइन दर्ज हो गया! ✅')
+      setFineModal(null)
+      setFineAmount('')
+      setFineReason('')
+      fetchMembers()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'लेट फाइन दर्ज करने में त्रुटि आई।')
+    } finally {
+      setSubmittingFine(false)
     }
   }
 
@@ -176,6 +213,18 @@ export default function Members() {
                       ) : (
                         <div className="flex items-center justify-center gap-1.5">
                           <button
+                            onClick={() => {
+                              setFineModal({ memberId: m.id, memberName: m.name, phone: m.phone })
+                              setFineAmount('')
+                              setFineReason('')
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors flex items-center gap-1 shadow-sm"
+                            title="लेट फाइन जोड़ें"
+                          >
+                            <span>⚡</span> लेट फाइन
+                          </button>
+
+                          <button
                             onClick={() => toggleStatus(m.id, m.status)}
                             className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                               m.status === 'active'
@@ -204,6 +253,115 @@ export default function Members() {
           </div>
         )}
       </div>
+
+      {/* Late Fine Modal for Admin */}
+      {fineModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-amber-200 space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                  ⚡ लेट फाइन जोड़ें (Levy Late Fine)
+                </span>
+                <h2 className="text-xl font-black text-gray-900 mt-2">
+                  {fineModal.memberName}
+                </h2>
+                <p className="text-xs text-gray-500 font-mono">📱 {fineModal.phone}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFineModal(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddFine} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  💵 लेट फाइन की रकम (Fine Amount in ₹) *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  placeholder="e.g. 100, 200, 500"
+                  className="input font-bold text-amber-800 text-lg"
+                  value={fineAmount}
+                  onChange={e => setFineAmount(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                    📅 महीना (Month)
+                  </label>
+                  <select
+                    className="input text-sm"
+                    value={fineMonth}
+                    onChange={e => setFineMonth(parseInt(e.target.value))}
+                  >
+                    {MONTH_NAMES.slice(1).map((m, idx) => (
+                      <option key={idx + 1} value={idx + 1}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                    📅 साल (Year)
+                  </label>
+                  <select
+                    className="input text-sm"
+                    value={fineYear}
+                    onChange={e => setFineYear(parseInt(e.target.value))}
+                  >
+                    {[2024, 2025, 2026, 2027].map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  📝 कारण या नोट (Reason / Note)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 10 तारीख के बाद जमा करने का फाइन"
+                  className="input text-sm"
+                  value={fineReason}
+                  onChange={e => setFineReason(e.target.value)}
+                />
+              </div>
+
+              <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-800">
+                💡 यह फाइन सदस्य के खाते में तुरंत जुड़ जाएगा और सदस्य को भी अपनी पेमेंट स्क्रीन पर दिखेगा।
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setFineModal(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-300 font-bold text-sm text-gray-700 hover:bg-gray-50 transition-all"
+                >
+                  रद्द करें (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingFine}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 font-bold text-sm text-white shadow-lg shadow-amber-600/30 transition-all flex items-center justify-center gap-1.5"
+                >
+                  {submittingFine ? 'जोड़ रहे हैं...' : '⚡ फाइन लगाएं'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

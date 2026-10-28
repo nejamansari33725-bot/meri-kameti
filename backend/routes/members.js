@@ -259,4 +259,60 @@ router.delete('/:id', authMiddleware, adminOnly, (req, res) => {
   }
 });
 
+// Add / impose Late Fine on a member directly (Admin only)
+router.post('/:id/late-fine', authMiddleware, adminOnly, (req, res) => {
+  const memberId = parseInt(req.params.id);
+  const { amount, month, year, reason } = req.body;
+  const fineAmount = parseFloat(amount);
+
+  if (isNaN(fineAmount) || fineAmount <= 0) {
+    return res.status(400).json({ error: 'Valid late fine amount daalen (jaise Rs. 100).' });
+  }
+
+  const member = db.prepare("SELECT id, name, phone, role FROM users WHERE id = ?").get(memberId);
+  if (!member) return res.status(404).json({ error: 'Member nahi mila.' });
+
+  const m = parseInt(month) || (new Date().getMonth() + 1);
+  const y = parseInt(year) || new Date().getFullYear();
+
+  // Check if there is already a payment for this user, month & year
+  const existingPayment = db.prepare(
+    "SELECT id, amount, late_fine, admin_note FROM payments WHERE user_id = ? AND month = ? AND year = ? AND status != 'rejected' ORDER BY id DESC LIMIT 1"
+  ).get(memberId, m, y);
+
+  if (existingPayment) {
+    const newFine = (existingPayment.late_fine || 0) + fineAmount;
+    const noteText = `Late fine Rs. ${fineAmount} added${reason ? ' (' + reason + ')' : ''}`;
+    const updatedNote = existingPayment.admin_note 
+      ? `${existingPayment.admin_note} | ${noteText}` 
+      : noteText;
+
+    db.prepare(`
+      UPDATE payments 
+      SET late_fine = ?, admin_note = ?
+      WHERE id = ?
+    `).run(newFine, updatedNote, existingPayment.id);
+  } else {
+    // Insert a standalone late fine record
+    db.prepare(`
+      INSERT INTO payments (user_id, amount, late_fine, month, year, status, note, admin_note, reviewed_at)
+      VALUES (?, 0, ?, ?, ?, 'approved', ?, ?, CURRENT_TIMESTAMP)
+    `).run(
+      memberId,
+      fineAmount,
+      m,
+      y,
+      `Late Fine: ${reason || 'Late payment penalty'}`,
+      `Admin dwara late fine lagaya gaya: Rs. ${fineAmount}${reason ? ' (' + reason + ')' : ''}`
+    );
+  }
+
+  // Notify member via WhatsApp placeholder
+  if (member.phone) {
+    notifyWhatsApp(member.phone, `⚠️ Mera Kameti Notice: Admin dwara aapke khate me Rs. ${fineAmount} ka Late Fine lagaya gaya hai (${MONTH_NAMES[m]} ${y}).\nKaran: ${reason || 'Kisht time par jama na karne par'}\n- Mera Kameti`);
+  }
+
+  res.json({ message: `${member.name} ke khate me Rs. ${fineAmount} ka Late Fine safaltapoorvak jod diya gaya! ✅` });
+});
+
 module.exports = router;

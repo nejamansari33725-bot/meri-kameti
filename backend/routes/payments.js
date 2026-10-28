@@ -38,30 +38,53 @@ router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
 
   // Check if already submitted for this month
   const existing = db.prepare(
-    'SELECT id FROM payments WHERE user_id = ? AND month = ? AND year = ? AND status != ?'
+    'SELECT id, amount, late_fine FROM payments WHERE user_id = ? AND month = ? AND year = ? AND status != ?'
   ).get(req.user.id, parseInt(month), parseInt(year), 'rejected');
-  if (existing) {
-    return res.status(400).json({ error: 'Is mahine ka payment pehle se submit hai.' });
-  }
 
-  // If admin is submitting for themselves, they can still have it recorded
+  let paymentId;
   const initialStatus = req.user.role === 'admin' ? 'approved' : 'pending';
 
-  const result = db.prepare(`
-    INSERT INTO payments (user_id, amount, late_fine, screenshot_path, reference_no, note, month, year, status, reviewed_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    req.user.id, 
-    parseFloat(amount), 
-    fine, 
-    screenshotPath, 
-    reference_no || null, 
-    note || null, 
-    parseInt(month), 
-    parseInt(year),
-    initialStatus,
-    initialStatus === 'approved' ? new Date().toISOString() : null
-  );
+  if (existing) {
+    if (existing.amount === 0) {
+      // Record was created as a standalone fine by Admin! Merge installment into it.
+      const totalFine = fine > 0 ? fine : (existing.late_fine || 0);
+      db.prepare(`
+        UPDATE payments 
+        SET amount = ?, late_fine = ?, screenshot_path = ?, reference_no = ?, note = ?, 
+            status = ?, submitted_at = CURRENT_TIMESTAMP, reviewed_at = ?
+        WHERE id = ?
+      `).run(
+        parseFloat(amount),
+        totalFine,
+        screenshotPath,
+        reference_no || null,
+        note || null,
+        initialStatus,
+        initialStatus === 'approved' ? new Date().toISOString() : null,
+        existing.id
+      );
+      paymentId = existing.id;
+    } else {
+      return res.status(400).json({ error: 'Is mahine ka payment pehle se submit hai.' });
+    }
+  } else {
+    const result = db.prepare(`
+      INSERT INTO payments (user_id, amount, late_fine, screenshot_path, reference_no, note, month, year, status, reviewed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      req.user.id, 
+      parseFloat(amount), 
+      fine, 
+      screenshotPath, 
+      reference_no || null, 
+      note || null, 
+      parseInt(month), 
+      parseInt(year),
+      initialStatus,
+      initialStatus === 'approved' ? new Date().toISOString() : null
+    );
+    paymentId = result.lastInsertRowid;
+  }
 
   // Notify admin via WhatsApp if submitted by a member
   if (req.user.role !== 'admin') {
@@ -75,7 +98,7 @@ router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
     message: initialStatus === 'approved' 
       ? 'Payment successfully recorded & approved! ✅' 
       : 'Payment submit ho gaya! Admin approve karega.', 
-    data: { id: result.lastInsertRowid } 
+    data: { id: paymentId } 
   });
 });
 
