@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { notifyWhatsApp } = require('../utils/whatsapp');
+const bcrypt = require('bcryptjs');
 
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
