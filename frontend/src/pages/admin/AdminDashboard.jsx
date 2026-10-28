@@ -13,6 +13,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
 
+  // Direct Payment Approval Modal on Dashboard
+  const [selectedImg, setSelectedImg] = useState(null)
+  const [paymentActionModal, setPaymentActionModal] = useState(null) // payment object
+  const [lateFine, setLateFine] = useState('0')
+  const [adminNote, setAdminNote] = useState('')
+
   const loadAllData = () => {
     Promise.all([
       api.get('/committee/summary'),
@@ -20,16 +26,22 @@ export default function AdminDashboard() {
       api.get('/members/pending-registrations')
     ]).then(([s, p, m]) => {
       setSummary(s.data.data)
-      setPendingPayments(p.data.data.slice(0, 5))
-      setPendingMembers(m.data.data)
+      setPendingPayments(p.data.data || [])
+      setPendingMembers(m.data.data || [])
     }).catch(err => console.error(err))
     .finally(() => setLoading(false))
   }
 
   useEffect(() => {
     loadAllData()
+    api.get('/settings').then(res => {
+      if (res.data?.data?.default_late_fine) {
+        setLateFine(res.data.data.default_late_fine)
+      }
+    }).catch(() => {})
   }, [])
 
+  // Member Registration Handlers
   const handleApproveMember = async (id, name) => {
     setActionLoading(true)
     try {
@@ -37,7 +49,6 @@ export default function AdminDashboard() {
       toast.success(`${name} का अकाउंट अप्रूव हो गया! ✅`)
       loadAllData()
 
-      // Automatically dispatch message to WhatsApp group
       const msg = `🎉 *MERA KAMETI — नया सदस्य जुड़ा!* 🎉\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${name}*\nस्टेटस: ✅ अप्रूव हो चुके हैं!\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
     } catch (err) {
@@ -53,6 +64,53 @@ export default function AdminDashboard() {
     try {
       await api.put(`/members/${id}/reject-registration`)
       toast.success(`${name} का रजिस्ट्रेशन रिजेक्ट कर दिया गया।`)
+      loadAllData()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'त्रुटि आई।')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // Payment Approval Handlers Directly on Dashboard
+  const handleConfirmApprovePayment = async () => {
+    if (!paymentActionModal) return
+    setActionLoading(true)
+    const p = paymentActionModal
+    try {
+      const fineVal = parseFloat(lateFine || 0)
+      await api.put(`/payments/${p.id}/approve`, {
+        admin_note: adminNote,
+        late_fine: fineVal
+      })
+      toast.success(`₹${p.amount} का पेमेंट अप्रूव हो गया! ✅`)
+
+      // Auto-dispatch receipt to WhatsApp group
+      const repVal = parseFloat(p.repayment_amount || 0)
+      const fineMsg = fineVal > 0 ? `\n⚡ लेट फाइन: ₹${fineVal}` : ''
+      const repMsg = repVal > 0 ? `\n🔄 उठाया पैसा वापसी: ₹${repVal}` : ''
+      const total = (parseFloat(p.amount) || 0) + fineVal + repVal
+      const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${p.member_name}*\n💵 किश्त जमा: ₹${p.amount}${repMsg}${fineMsg}\n💰 कुल भुगतान: ₹${total}\n📅 महीना: ${MONTH_NAMES[p.month]} ${p.year}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
+
+      setPaymentActionModal(null)
+      setLateFine('0')
+      setAdminNote('')
+      loadAllData()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'पेमेंट अप्रूव नहीं हो सका।')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleRejectPayment = async (p) => {
+    const reason = window.prompt(`❌ ${p.member_name} का पेमेंट रिजेक्ट करने का कारण लिखें:`, 'स्क्रीनशॉट सही नहीं है / रेफरेंस नंबर मैच नहीं हुआ')
+    if (reason === null) return
+    setActionLoading(true)
+    try {
+      await api.put(`/payments/${p.id}/reject`, { admin_note: reason })
+      toast.success('पेमेंट रिजेक्ट कर दिया गया।')
       loadAllData()
     } catch (err) {
       toast.error(err.response?.data?.error || 'त्रुटि आई।')
@@ -91,6 +149,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+      
       {/* Modern Hero Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-6 sm:p-8 text-white shadow-2xl border border-slate-700/50">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
@@ -109,23 +168,195 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <a
-              href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-lg flex items-center gap-2 shrink-0"
-            >
-              <span>💬</span> व्हाट्सएप ग्रुप
-            </a>
             <Link
-              to="/admin/ledger"
+              to="/admin/approvals"
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2"
             >
-              <span>📖</span> पूरा खाता बही खोलें
+              <span>✅</span> अप्रूवल्स पेज
+              {pendingPayments.length > 0 && (
+                <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black animate-pulse">
+                  {pendingPayments.length}
+                </span>
+              )}
+            </Link>
+            <Link
+              to="/admin/ledger"
+              className="bg-slate-700/80 hover:bg-slate-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all border border-slate-600 flex items-center gap-2"
+            >
+              <span>📖</span> पूरा खाता बही
             </Link>
           </div>
         </div>
       </div>
+
+      {/* TOP PRIORITY: PENDING PAYMENTS ALERT BOX (DIRECT APPROVAL) */}
+      {pendingPayments.length > 0 && (
+        <div className="card bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50 border-2 border-emerald-400 shadow-xl space-y-4 animate-fadeIn">
+          <div className="flex flex-wrap justify-between items-center gap-2 border-b border-emerald-200/80 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg font-bold shadow-md shadow-emerald-600/30 animate-bounce">
+                💰
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                    भुगतान अनुमोदन अनुरोध ({pendingPayments.length} पेंडिंग)
+                  </h2>
+                  <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                    APPROVE NOW
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600">
+                  सदस्यों ने पैसे जमा किए हैं — स्क्रीनशॉट देखकर तुरंत नीचे दिए गए बटन से <strong>Approve</strong> करें
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/admin/approvals"
+              className="text-xs font-bold text-emerald-800 hover:text-emerald-950 underline bg-white/80 px-3 py-1.5 rounded-lg border border-emerald-200 shadow-sm"
+            >
+              पूरा अप्रूवल्स पेज खोलें →
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {pendingPayments.map(p => {
+              const repAmt = parseFloat(p.repayment_amount) || 0
+              const fineAmt = parseFloat(p.late_fine) || 0
+              const totalAmt = (parseFloat(p.amount) || 0) + repAmt + fineAmt
+
+              return (
+                <div
+                  key={p.id}
+                  className="bg-white rounded-2xl p-4 border border-emerald-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-emerald-400 transition-all"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-slate-900 text-base">{p.member_name}</span>
+                      <span className="text-xs text-slate-500 font-mono">📱 {p.member_phone}</span>
+                      <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {MONTH_NAMES[p.month]} {p.year}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-emerald-700 font-black text-lg">
+                        ₹ {p.amount} (किश्त)
+                      </span>
+                      {repAmt > 0 && (
+                        <span className="bg-indigo-100 text-indigo-900 text-xs px-2.5 py-0.5 rounded-full font-bold">
+                          🔄 +₹{repAmt} उठाया वापसी
+                        </span>
+                      )}
+                      {fineAmt > 0 && (
+                        <span className="bg-amber-100 text-amber-900 text-xs px-2.5 py-0.5 rounded-full font-bold">
+                          ⚡ +₹{fineAmt} लेट फाइन
+                        </span>
+                      )}
+                      <span className="text-xs text-slate-700 font-bold bg-slate-100 px-2 py-0.5 rounded-md">
+                        कुल: ₹{totalAmt.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-slate-500 flex flex-wrap gap-2 items-center">
+                      <span>🔢 UTR / Ref: <strong className="font-mono text-slate-800">{p.reference_no || 'N/A'}</strong></span>
+                      {p.note && <span>• 📝 "{p.note}"</span>}
+                      <span className="text-slate-400">• समय: {new Date(p.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+                    {p.screenshot_path ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedImg(p.screenshot_path)}
+                        className="text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-xl transition-colors flex items-center gap-1 shadow-sm"
+                      >
+                        📸 स्क्रीनशॉट देखें
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">बिना स्क्रीनशॉट</span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentActionModal(p)
+                        setLateFine(p.late_fine ? p.late_fine.toString() : '0')
+                        setAdminNote('')
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black px-4 py-2 rounded-xl shadow-md shadow-emerald-600/30 transition-all flex items-center gap-1.5 transform hover:scale-105"
+                    >
+                      <span>✅</span> Approve करें
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRejectPayment(p)}
+                      disabled={actionLoading}
+                      className="bg-rose-500 hover:bg-rose-600 text-white text-xs sm:text-sm font-bold px-3 py-2 rounded-xl shadow-sm transition-all"
+                    >
+                      ✕ Reject
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Member Registrations Alert Box (If any) */}
+      {pendingMembers.length > 0 && (
+        <div className="card bg-gradient-to-r from-amber-50/90 to-orange-50/90 border-amber-300 shadow-md space-y-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">⏳</span>
+              <div>
+                <h3 className="font-extrabold text-amber-950 text-base">
+                  नए सदस्य अप्रूवल अनुरोध ({pendingMembers.length} नए मेम्बर)
+                </h3>
+                <p className="text-xs text-amber-800">
+                  ये सदस्य रजिस्टर कर चुके हैं लेकिन आपके अप्रूव करने तक लॉगिन नहीं कर सकते।
+                </p>
+              </div>
+            </div>
+            <span className="bg-amber-400 text-amber-950 text-xs px-2.5 py-1 rounded-full font-black animate-pulse">
+              ACTION REQUIRED
+            </span>
+          </div>
+
+          <div className="divide-y divide-amber-200/60 pt-1">
+            {pendingMembers.map(m => (
+              <div key={m.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <span className="font-bold text-slate-900 text-sm">{m.name}</span>
+                  <span className="text-xs text-slate-600 font-mono ml-2">📱 {m.phone}</span>
+                  <span className="text-[11px] text-amber-800 block sm:inline sm:ml-2">
+                    (पंजीकृत: {new Date(m.created_at).toLocaleDateString()})
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleApproveMember(m.id, m.name)}
+                    disabled={actionLoading}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all"
+                  >
+                    ✓ Approve करें
+                  </button>
+                  <button
+                    onClick={() => handleRejectMember(m.id, m.name)}
+                    disabled={actionLoading}
+                    className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all"
+                  >
+                    ✕ Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* WhatsApp Live Group Broadcast Center */}
       <div className="card bg-gradient-to-br from-emerald-50 via-teal-50 to-white border border-emerald-200 shadow-md space-y-3">
@@ -191,58 +422,6 @@ export default function AdminDashboard() {
           </button>
         </div>
       </div>
-
-      {/* Pending Member Registrations Alert Box (If any) */}
-      {pendingMembers.length > 0 && (
-        <div className="card bg-gradient-to-r from-amber-50/90 to-orange-50/90 border-amber-300 shadow-md space-y-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">⏳</span>
-              <div>
-                <h3 className="font-extrabold text-amber-950 text-base">
-                  नए सदस्य अप्रूवल अनुरोध ({pendingMembers.length} नए मेम्बर)
-                </h3>
-                <p className="text-xs text-amber-800">
-                  ये सदस्य रजिस्टर कर चुके हैं लेकिन आपके अप्रूव करने तक लॉगिन नहीं कर सकते।
-                </p>
-              </div>
-            </div>
-            <span className="bg-amber-400 text-amber-950 text-xs px-2.5 py-1 rounded-full font-black animate-pulse">
-              ACTION REQUIRED
-            </span>
-          </div>
-
-          <div className="divide-y divide-amber-200/60 pt-1">
-            {pendingMembers.map(m => (
-              <div key={m.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <span className="font-bold text-slate-900 text-sm">{m.name}</span>
-                  <span className="text-xs text-slate-600 font-mono ml-2">📱 {m.phone}</span>
-                  <span className="text-[11px] text-amber-800 block sm:inline sm:ml-2">
-                    (पंजीकृत: {new Date(m.created_at).toLocaleDateString()})
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleApproveMember(m.id, m.name)}
-                    disabled={actionLoading}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all"
-                  >
-                    ✓ Approve करें
-                  </button>
-                  <button
-                    onClick={() => handleRejectMember(m.id, m.name)}
-                    disabled={actionLoading}
-                    className="bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all"
-                  >
-                    ✕ Reject
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Credit, Debit & Net Fund High-End Widgets */}
       {summary && (
@@ -332,7 +511,7 @@ export default function AdminDashboard() {
             <div className="text-2xl group-hover:scale-110 transition-transform">✅</div>
             <div className="text-xs font-bold text-slate-900 mt-2">पेमेंट अप्रूव</div>
             {summary?.pendingCount > 0 && (
-              <span className="inline-block bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black mt-1">
+              <span className="inline-block bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black mt-1 animate-pulse">
                 {summary.pendingCount} पेंडिंग
               </span>
             )}
@@ -374,33 +553,116 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Pending payments quick review list */}
-      {pendingPayments.length > 0 && (
-        <div className="card space-y-3">
-          <div className="flex justify-between items-center">
-            <h2 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-              <span>⏳</span> भुगतान अनुमोदन का इंतज़ार ({pendingPayments.length})
-            </h2>
-            <Link to="/admin/approvals" className="text-emerald-700 text-xs font-bold hover:underline">
-              सभी चेक करें →
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {pendingPayments.map(p => (
-              <div key={p.id} className="flex justify-between items-center p-3 bg-slate-50 hover:bg-emerald-50/40 rounded-xl border border-slate-200/80 transition-all">
-                <div>
-                  <span className="font-bold text-slate-900 text-sm">{p.member_name}</span>
-                  <span className="text-slate-500 text-xs ml-2 font-mono">₹{p.amount}</span>
-                  <span className="text-[11px] text-slate-400 ml-2">({MONTH_NAMES[p.month]} {p.year})</span>
-                </div>
-                <Link to="/admin/approvals" className="btn-primary py-1.5 px-3 text-xs">
-                  रिव्यू करें
-                </Link>
-              </div>
-            ))}
+      {/* Screenshot Modal */}
+      {selectedImg && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedImg(null)}>
+          <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+            <img src={selectedImg} alt="Payment Screenshot" className="w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl bg-black" />
+            <button
+              onClick={() => setSelectedImg(null)}
+              className="absolute top-3 right-3 bg-white text-gray-800 rounded-full w-9 h-9 flex items-center justify-center font-bold hover:bg-gray-100 shadow-lg text-lg"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
+
+      {/* Payment Approval Modal */}
+      {paymentActionModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-emerald-300 space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  ✅ भुगतान अनुमोदन (Confirm Payment)
+                </span>
+                <h3 className="text-xl font-black text-gray-900 mt-2">
+                  {paymentActionModal.member_name}
+                </h3>
+                <p className="text-xs text-gray-500 font-mono">📱 {paymentActionModal.member_phone}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaymentActionModal(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-600">महीना:</span>
+                <strong className="text-slate-900">{MONTH_NAMES[paymentActionModal.month]} {paymentActionModal.year}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">किश्त राशि:</span>
+                <strong className="text-emerald-700 font-black text-sm">₹ {paymentActionModal.amount}</strong>
+              </div>
+              {paymentActionModal.repayment_amount > 0 && (
+                <div className="flex justify-between text-indigo-700 font-bold">
+                  <span>🔄 उठाया पैसा वापसी:</span>
+                  <span>₹ {paymentActionModal.repayment_amount}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-mono text-[11px] text-slate-500 pt-1 border-t border-slate-200">
+                <span>Ref / UTR:</span>
+                <span>{paymentActionModal.reference_no || 'N/A'}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                ⚡ लेट फाइन (Late Fine ₹)
+              </label>
+              <input
+                type="number"
+                min="0"
+                className="input text-sm font-bold text-amber-800"
+                placeholder="0"
+                value={lateFine}
+                onChange={e => setLateFine(e.target.value)}
+              />
+              <span className="text-[11px] text-gray-400 mt-0.5 block">
+                यदि सदस्य पर लेट फीस लगानी हो तो दर्ज करें (अन्यथा 0 रहने दें)।
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                📝 नोट / टिप्पणी (वैकल्पिक)
+              </label>
+              <textarea
+                className="input text-sm"
+                rows="2"
+                placeholder="कोई टिप्पणी या संदेश..."
+                value={adminNote}
+                onChange={e => setAdminNote(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setPaymentActionModal(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-300 font-bold text-sm text-gray-700 hover:bg-gray-50 transition-all"
+              >
+                रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmApprovePayment}
+                disabled={actionLoading}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-sm text-white shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-1.5"
+              >
+                {actionLoading ? 'अप्रूव हो रहा है...' : '✅ Approve करें'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

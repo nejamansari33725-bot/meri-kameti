@@ -29,6 +29,8 @@ function getMembersWithLedger() {
       COALESCE(u.custom_debit, MAX(0, COALESCE(r.total_debit, 0) - COALESCE(p.total_repayment, 0)), 0) as total_debit,
       COALESCE(r.rounds_won_count, 0) as rounds_won_count,
       COALESCE(r.rounds_won_info, '') as rounds_won_info,
+      COALESCE(pend.pending_payment_count, 0) as pending_payment_count,
+      COALESCE(pend.pending_payment_amount, 0) as pending_payment_amount,
       ((COALESCE(u.custom_credit, p.total_credit, 0) + COALESCE(u.custom_late_fine, p.total_late_fine, 0)) - COALESCE(u.custom_debit, MAX(0, COALESCE(r.total_debit, 0) - COALESCE(p.total_repayment, 0)), 0)) as net_balance
     FROM users u
     LEFT JOIN (
@@ -42,6 +44,15 @@ function getMembersWithLedger() {
       WHERE status = 'approved'
       GROUP BY user_id
     ) p ON u.id = p.user_id
+    LEFT JOIN (
+      SELECT 
+        user_id,
+        COUNT(id) as pending_payment_count,
+        SUM(amount + COALESCE(repayment_amount, 0)) as pending_payment_amount
+      FROM payments
+      WHERE status = 'pending'
+      GROUP BY user_id
+    ) pend ON u.id = pend.user_id
     LEFT JOIN (
       SELECT 
         winner_user_id, 

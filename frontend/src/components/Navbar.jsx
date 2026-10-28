@@ -1,10 +1,13 @@
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import api from '../api/axios'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [pendingCount, setPendingCount] = useState(0)
 
   const handleLogout = () => {
     logout()
@@ -12,6 +15,14 @@ export default function Navbar() {
   }
 
   const isAdmin = user?.role === 'admin'
+
+  useEffect(() => {
+    if (isAdmin) {
+      api.get('/payments/pending').then(res => {
+        setPendingCount(res.data?.data?.length || 0)
+      }).catch(() => {})
+    }
+  }, [isAdmin, location.pathname])
 
   const memberLinks = [
     { to: '/dashboard', label: '🏠 डैशबोर्ड' },
@@ -23,9 +34,9 @@ export default function Navbar() {
 
   const adminLinks = [
     { to: '/admin', label: '🏠 डैशबोर्ड' },
+    { to: '/admin/approvals', label: '✅ अप्रूवल्स', badge: pendingCount > 0 ? pendingCount : null },
     { to: '/admin/ledger', label: '📖 खाता बही' },
     { to: '/pay', label: '💰 अपनी किश्त' },
-    { to: '/admin/approvals', label: '✅ अप्रूवल्स' },
     { to: '/admin/members', label: '👥 मेम्बर्स' },
     { to: '/admin/committee', label: '🏆 विनर चुनें' },
     { to: '/admin/reports', label: '📊 रिपोर्ट्स' },
@@ -66,13 +77,18 @@ export default function Navbar() {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center ${
                     isActive
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-bold'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800'
                   }`}
                 >
-                  {link.label}
+                  <span>{link.label}</span>
+                  {link.badge && (
+                    <span className="ml-1.5 bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black animate-pulse shadow-sm">
+                      {link.badge}
+                    </span>
+                  )}
                 </Link>
               )
             })}
@@ -119,7 +135,7 @@ export default function Navbar() {
             href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-[#25D366] text-white text-xs px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 shrink-0"
+            className="bg-[#25D366] text-white text-xs px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 shrink-0 shadow-sm"
           >
             <span>💬</span> ग्रुप
           </a>
@@ -129,13 +145,18 @@ export default function Navbar() {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center shrink-0 ${
                   isActive
                     ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
                     : 'text-slate-300 hover:text-white bg-slate-800/60 border border-slate-700/50'
                 }`}
               >
-                {link.label}
+                <span>{link.label}</span>
+                {link.badge && (
+                  <span className="ml-1.5 bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black animate-pulse shadow-sm">
+                    {link.badge}
+                  </span>
+                )}
               </Link>
             )
           })}

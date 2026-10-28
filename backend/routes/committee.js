@@ -162,7 +162,7 @@ router.post('/apply-payout', authMiddleware, (req, res) => {
   }
 
   // Check if member already applied for this month
-  const existing = db.prepare('SELECT id FROM payout_requests WHERE user_id = ? AND month = ? AND year = ? AND status = "pending"').get(req.user.id, parseInt(month), parseInt(year));
+  const existing = db.prepare("SELECT id FROM payout_requests WHERE user_id = ? AND month = ? AND year = ? AND status = 'pending'").get(req.user.id, parseInt(month), parseInt(year));
   if (existing) {
     db.prepare('UPDATE payout_requests SET requested_amount = ?, reason = ? WHERE id = ?').run(amt, reason || null, existing.id);
     return res.json({ message: 'Aapka aavedan update ho gaya! ✅' });

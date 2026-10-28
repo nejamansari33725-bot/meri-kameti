@@ -203,12 +203,23 @@ export default function Members() {
                   <tr key={m.id} className="hover:bg-gray-50">
                     <td className="py-3.5 px-3 text-gray-400">{i + 1}</td>
                     <td className="py-3.5 px-3 font-semibold text-gray-900">
-                      {m.name}
-                      {m.role === 'admin' && (
-                        <span className="ml-1.5 text-[10px] bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
-                          ADMIN
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{m.name}</span>
+                        {m.role === 'admin' && (
+                          <span className="text-[10px] bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
+                            ADMIN
+                          </span>
+                        )}
+                        {m.pending_payment_count > 0 && (
+                          <Link
+                            to="/admin/approvals"
+                            className="bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm flex items-center gap-1"
+                            title="पेंडिंग पेमेंट अप्रूव करें"
+                          >
+                            <span>⏳</span> ₹{m.pending_payment_amount} अप्रूव करें →
+                          </Link>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-3 text-gray-600 font-mono text-xs">{m.phone}</td>
                     <td className="py-3.5 px-3 text-right font-bold text-green-600">
