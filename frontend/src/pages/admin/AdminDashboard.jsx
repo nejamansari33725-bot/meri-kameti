@@ -36,6 +36,10 @@ export default function AdminDashboard() {
       await api.put(`/members/${id}/approve-registration`)
       toast.success(`${name} का अकाउंट अप्रूव हो गया! ✅`)
       loadAllData()
+
+      // Automatically dispatch message to WhatsApp group
+      const msg = `🎉 *MERA KAMETI — नया सदस्य जुड़ा!* 🎉\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${name}*\nस्टेटस: ✅ अप्रूव हो चुके हैं!\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
     } catch (err) {
       toast.error(err.response?.data?.error || 'अप्रूव नहीं हो पाया।')
     } finally {

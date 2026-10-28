@@ -37,6 +37,16 @@ export default function Approvals() {
       }
       await api.put(`/payments/${noteModal.id}/${endpoint}`, payload)
       toast.success(noteModal.action === 'approve' ? 'Payment approve ho gaya! ✅' : 'Payment reject ho gaya.')
+      
+      // If approved, automatically dispatch receipt message to WhatsApp group
+      if (noteModal.action === 'approve') {
+        const fineVal = parseFloat(lateFine || 0)
+        const fineMsg = fineVal > 0 ? `\n⚡ लेट फाइन: ₹${fineVal}` : ''
+        const now = new Date()
+        const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${noteModal.member_name}*\n💵 जमा राशि: ₹${noteModal.amount}${fineMsg}\n📅 महीना: ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
+      }
+
       setNoteModal(null)
       setNote('')
       fetchPending()

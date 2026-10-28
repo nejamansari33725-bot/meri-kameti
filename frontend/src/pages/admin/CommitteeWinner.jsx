@@ -51,6 +51,11 @@ export default function CommitteeWinner() {
       })
       toast.success(`🏆 ${memberName} ko winner set kar diya!`)
       fetchData()
+
+      // Automatically dispatch winner announcement to WhatsApp group
+      const amt = payoutInput ? parseFloat(payoutInput).toLocaleString('en-IN') : 'कमिटी राशि'
+      const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${memberName}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amt}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error.')
     } finally {

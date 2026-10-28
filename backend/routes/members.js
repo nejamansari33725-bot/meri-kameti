@@ -315,4 +315,24 @@ router.post('/:id/late-fine', authMiddleware, adminOnly, (req, res) => {
   res.json({ message: `${member.name} ke khate me Rs. ${fineAmount} ka Late Fine safaltapoorvak jod diya gaya! ✅` });
 });
 
+// Admin Reset Member Password
+router.put('/:id/reset-password', authMiddleware, adminOnly, (req, res) => {
+  const memberId = parseInt(req.params.id);
+  const { new_password } = req.body;
+  const pass = new_password && new_password.trim() ? new_password.trim() : '123456';
+
+  const member = db.prepare('SELECT id, name, phone, role FROM users WHERE id = ?').get(memberId);
+  if (!member) return res.status(404).json({ error: 'Member nahi mila.' });
+  if (member.role === 'admin') return res.status(400).json({ error: 'Admin password yahan se reset nahi kiya ja sakta.' });
+
+  const hashedPassword = bcrypt.hashSync(pass, 10);
+  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, memberId);
+
+  if (member.phone) {
+    notifyWhatsApp(member.phone, `🔐 Mera Kameti: Admin dwara aapka password reset karke '${pass}' kar diya gaya hai. Ab aap login kar sakte hain.`);
+  }
+
+  res.json({ message: `${member.name} ka password reset ho gaya! Naya password: ${pass} ✅` });
+});
+
 module.exports = router;

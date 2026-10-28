@@ -50,6 +50,17 @@ export default function Members() {
     }
   }
 
+  const handleResetPassword = async (id, name) => {
+    const newPass = window.prompt(`🔑 "${name}" के लिए नया पासवर्ड दर्ज करें (खाली छोड़ने पर '123456' सेट होगा):`, '123456')
+    if (newPass === null) return
+    try {
+      const res = await api.put(`/members/${id}/reset-password`, { new_password: newPass })
+      toast.success(res.data?.message || 'पासवर्ड रीसेट हो गया! ✅')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'त्रुटि आई।')
+    }
+  }
+
   const handleAddFine = async (e) => {
     e.preventDefault()
     if (!fineAmount || parseFloat(fineAmount) <= 0) {
@@ -212,6 +223,14 @@ export default function Members() {
                         </span>
                       ) : (
                         <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleResetPassword(m.id, m.name)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors flex items-center gap-1 shadow-sm"
+                            title="पासवर्ड रीसेट करें"
+                          >
+                            <span>🔑</span> पासवर्ड
+                          </button>
+
                           <button
                             onClick={() => {
                               setFineModal({ memberId: m.id, memberName: m.name, phone: m.phone })

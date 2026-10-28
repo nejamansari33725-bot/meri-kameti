@@ -144,4 +144,43 @@ router.put('/profile', authMiddleware, (req, res) => {
   });
 });
 
+// Member Forgot Password (Reset via Name & Phone verification)
+router.post('/forgot-password', (req, res) => {
+  const { phone, name, new_password } = req.body;
+  if (!phone || !name || !new_password) {
+    return res.status(400).json({ error: 'Mobile number, Registered Name aur Naya Password sabhi zaroori hain.' });
+  }
+
+  if (new_password.length < 6) {
+    return res.status(400).json({ error: 'Naya password kam se kam 6 aksharon ka hona chahiye.' });
+  }
+
+  const user = db.prepare('SELECT id, name, phone, role, status FROM users WHERE phone = ?').get(phone.trim());
+  if (!user) {
+    return res.status(404).json({ error: 'Yeh mobile number registered nahi hai.' });
+  }
+
+  if (user.role === 'admin') {
+    return res.status(403).json({ error: 'Admin password yahan se reset nahi ho sakta. Admin Panel ki Settings me jaakar badlein.' });
+  }
+
+  // Security check: verify registered name matches
+  const enteredName = name.trim().toLowerCase();
+  const dbName = user.name.trim().toLowerCase();
+  const isMatch = dbName === enteredName || dbName.includes(enteredName) || enteredName.includes(dbName);
+  
+  if (!isMatch) {
+    return res.status(400).json({ 
+      error: 'Darj kiya gaya naam registered naam se match nahi kar raha hai. Sahi naam daalein ya Admin se sampark karein.' 
+    });
+  }
+
+  const hashedPassword = bcrypt.hashSync(new_password, 10);
+  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, user.id);
+
+  notifyWhatsApp(user.phone, `🔐 Mera Kameti: Aapka password safaltapoorvak badal diya gaya hai. Ab aap naye password se login kar sakte hain.`);
+
+  res.json({ message: 'Password safaltapoorvak reset ho gaya! Ab aap naye password se login kar sakte hain. ✅' });
+});
+
 module.exports = router;
