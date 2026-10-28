@@ -9,21 +9,33 @@ export default function Approvals() {
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedImg, setSelectedImg] = useState(null)
-  const [noteModal, setNoteModal] = useState(null) // { id, action }
+  const [noteModal, setNoteModal] = useState(null) // { id, action, amount, member_name }
   const [note, setNote] = useState('')
+  const [lateFine, setLateFine] = useState('0')
   const [actionLoading, setActionLoading] = useState(false)
 
   const fetchPending = () => {
     api.get('/payments/pending').then(res => setPayments(res.data.data)).finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchPending() }, [])
+  useEffect(() => { 
+    fetchPending() 
+    api.get('/settings').then(res => {
+      if (res.data?.data?.default_late_fine) {
+        setLateFine(res.data.data.default_late_fine)
+      }
+    }).catch(() => {})
+  }, [])
 
   const handleAction = async () => {
     setActionLoading(true)
     try {
       const endpoint = noteModal.action === 'approve' ? 'approve' : 'reject'
-      await api.put(`/payments/${noteModal.id}/${endpoint}`, { admin_note: note })
+      const payload = {
+        admin_note: note,
+        late_fine: noteModal.action === 'approve' ? parseFloat(lateFine || 0) : 0
+      }
+      await api.put(`/payments/${noteModal.id}/${endpoint}`, payload)
       toast.success(noteModal.action === 'approve' ? 'Payment approve ho gaya! ✅' : 'Payment reject ho gaya.')
       setNoteModal(null)
       setNote('')
@@ -56,9 +68,9 @@ export default function Approvals() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-lg">{p.member_name}</span>
-                      <span className="text-gray-500 text-sm">({p.member_phone})</span>
+                      <span className="text-gray-500 text-sm font-mono">({p.member_phone})</span>
                     </div>
-                    <div className="text-primary-700 font-bold text-xl">Rs. {p.amount}</div>
+                    <div className="text-primary-700 font-bold text-xl">₹ {p.amount}</div>
                     <div className="text-gray-500 text-sm">
                       📅 {MONTH_NAMES[p.month]} {p.year} &nbsp;|&nbsp;
                       🔢 Ref: {p.reference_no || 'N/A'}
@@ -70,17 +82,23 @@ export default function Approvals() {
                   <div className="flex flex-col gap-2 items-end">
                     {p.screenshot_path && (
                       <button onClick={() => setSelectedImg(p.screenshot_path)}
-                        className="text-sm text-blue-600 hover:underline border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50">
+                        className="text-sm text-blue-600 hover:underline border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 font-medium">
                         📸 Screenshot dekho
                       </button>
                     )}
                     <div className="flex gap-2">
-                      <button onClick={() => { setNoteModal({ id: p.id, action: 'approve' }); setNote('') }}
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                      <button onClick={() => { 
+                        setNoteModal({ id: p.id, action: 'approve', amount: p.amount, member_name: p.member_name }); 
+                        setNote('') 
+                      }}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-bold shadow-sm">
                         ✅ Approve
                       </button>
-                      <button onClick={() => { setNoteModal({ id: p.id, action: 'reject' }); setNote('') }}
-                        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors text-sm font-medium">
+                      <button onClick={() => { 
+                        setNoteModal({ id: p.id, action: 'reject', amount: p.amount, member_name: p.member_name }); 
+                        setNote('') 
+                      }}
+                        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors text-sm font-bold shadow-sm">
                         ❌ Reject
                       </button>
                     </div>
@@ -105,24 +123,62 @@ export default function Approvals() {
         </div>
       )}
 
-      {/* Note/Confirm Modal */}
+      {/* Note & Late Fine Modal */}
       {noteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-bold mb-2">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold">
               {noteModal.action === 'approve' ? '✅ Payment Approve Karein?' : '❌ Payment Reject Karein?'}
             </h3>
-            <p className="text-gray-500 text-sm mb-4">Admin note (optional):</p>
-            <textarea className="input mb-4" rows={3} placeholder="Note likhein..."
-              value={note} onChange={e => setNote(e.target.value)} />
-            <div className="flex gap-3">
-              <button onClick={handleAction} disabled={actionLoading}
-                className={`flex-1 py-2 rounded-lg text-white font-medium transition-colors ${
+            
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs text-gray-700">
+              मेम्बर: <strong>{noteModal.member_name}</strong> | राशि: <strong>₹{noteModal.amount}</strong>
+            </div>
+
+            {noteModal.action === 'approve' && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  ⚠️ लेट फाइन (Late Fine ₹)
+                </label>
+                <input
+                  type="number"
+                  className="input text-sm font-bold text-red-600"
+                  placeholder="0"
+                  value={lateFine}
+                  onChange={e => setLateFine(e.target.value)}
+                />
+                <span className="text-[11px] text-gray-400 mt-1 block">
+                  यदि मेम्बर ने समय पर पैसा नहीं भेजा, तो यहाँ लेट फाइन दर्ज करें (डिफ़ॉल्ट 0)।
+                </span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Admin Note (वैकल्पिक / Optional):
+              </label>
+              <textarea 
+                className="input text-sm" 
+                rows={2} 
+                placeholder="Note likhein..."
+                value={note} 
+                onChange={e => setNote(e.target.value)} 
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                onClick={handleAction} 
+                disabled={actionLoading}
+                className={`flex-1 py-2.5 rounded-lg text-white font-bold transition-colors shadow-sm ${
                   noteModal.action === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-500 hover:bg-red-600'
-                } disabled:opacity-50`}>
+                } disabled:opacity-50`}
+              >
                 {actionLoading ? '⏳...' : noteModal.action === 'approve' ? '✅ Confirm Approve' : '❌ Confirm Reject'}
               </button>
-              <button onClick={() => setNoteModal(null)} className="btn-secondary flex-1">Roko</button>
+              <button onClick={() => setNoteModal(null)} className="btn-secondary flex-1 font-semibold">
+                रद्द करें
+              </button>
             </div>
           </div>
         </div>
