@@ -23,10 +23,12 @@ export default function Navbar() {
   const adminLinks = [
     { to: '/admin', label: '🏠 Dashboard' },
     { to: '/admin/ledger', label: '📖 खाता बही (Khata)' },
+    { to: '/pay', label: '💰 Pay My Kameti' },
     { to: '/admin/approvals', label: '✅ Approvals' },
     { to: '/admin/members', label: '👥 Members' },
     { to: '/admin/committee', label: '🏆 Committee' },
     { to: '/admin/reports', label: '📊 Reports' },
+    { to: '/admin/settings', label: '⚙️ Settings' },
   ]
 
   const links = isAdmin ? adminLinks : memberLinks
@@ -46,7 +48,7 @@ export default function Navbar() {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                   location.pathname === link.to
                     ? 'bg-primary-800 text-white shadow-inner'
                     : 'text-green-100 hover:bg-primary-700'
@@ -58,10 +60,10 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-sm text-green-100 hidden sm:block">👤 {user?.name}</span>
+            <span className="text-xs text-green-100 hidden sm:block">👤 {user?.name}</span>
             <button
               onClick={handleLogout}
-              className="bg-primary-800 hover:bg-primary-900 text-white text-xs sm:text-sm px-3 py-1.5 rounded-lg transition-colors font-medium shadow-sm"
+              className="bg-primary-800 hover:bg-primary-900 text-white text-xs px-3 py-1.5 rounded-lg transition-colors font-medium shadow-sm"
             >
               Logout
             </button>
