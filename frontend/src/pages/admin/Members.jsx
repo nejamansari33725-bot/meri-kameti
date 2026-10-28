@@ -83,6 +83,19 @@ export default function Members() {
         reason: fineReason
       })
       toast.success(res.data?.message || 'लेट फाइन दर्ज हो गया! ✅')
+
+      // Automatically open WhatsApp notification for member
+      const mName = res.data?.data?.name || fineModal.memberName
+      const mPhone = res.data?.data?.phone || fineModal.phone
+      const amt = res.data?.data?.amount || fineAmount
+      const rsn = fineReason || 'समय पर किश्त जमा न करने पर'
+      const msg = `⚠️ *MERA KAMETI — लेट फाइन सूचना (Late Fine Notice)* ⚠️\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${mName}*\n⚡ लेट फाइन राशि: *₹${amt}*\n📅 महीना: ${MONTH_NAMES[fineMonth]} ${fineYear}\n📝 कारण: ${rsn}\n━━━━━━━━━━━━━━━━━━━━\nकृपया पोर्टल पर जाकर लेट फाइन का भुगतान करें:\n👉 लाइव पोर्टल: https://mera-kameti-app-production.up.railway.app/pay\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      if (mPhone) {
+        const cleanPhone = String(mPhone).replace(/[^0-9]/g, '')
+        const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone
+        window.open(`https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(msg)}`, '_blank')
+      }
+
       setFineModal(null)
       setFineAmount('')
       setFineReason('')

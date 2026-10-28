@@ -77,7 +77,7 @@ export default function CommitteeWinner() {
     <div className="max-w-5xl mx-auto p-4 space-y-6">
       {/* Select month & Payout Amount */}
       <div className="card space-y-4">
-        <h1 className="text-2xl font-bold text-primary-700">🏆 Committee Winner Select Karein</h1>
+        <h1 className="text-2xl font-bold text-emerald-800">🏆 कमिटी विनर चुनें / Select Committee Winner</h1>
         
         <div className="flex flex-wrap gap-4 items-end">
           <div>

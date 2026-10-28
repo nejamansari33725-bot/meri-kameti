@@ -360,12 +360,37 @@ router.post('/:id/late-fine', authMiddleware, adminOnly, (req, res) => {
     );
   }
 
+  // Insert in-app notification for the member
+  try {
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type)
+      VALUES (?, ?, ?, 'late_fine')
+    `).run(
+      memberId,
+      `⚡ लेट फाइन सूचना (Late Fine Notice) - ${MONTH_NAMES[m]} ${y}`,
+      `एडमिन द्वारा आपके खाते में ₹${fineAmount} का लेट फाइन लगाया गया है (${MONTH_NAMES[m]} ${y})। कारण: ${reason || 'समय पर किश्त जमा न करने पर'}। कृपया पेमेंट पेज पर जाकर इसे जमा करें।`
+    );
+  } catch (err) {
+    console.error('Notification error:', err);
+  }
+
   // Notify member via WhatsApp placeholder
   if (member.phone) {
     notifyWhatsApp(member.phone, `⚠️ Mera Kameti Notice: Admin dwara aapke khate me Rs. ${fineAmount} ka Late Fine lagaya gaya hai (${MONTH_NAMES[m]} ${y}).\nKaran: ${reason || 'Kisht time par jama na karne par'}\n- Mera Kameti`);
   }
 
-  res.json({ message: `${member.name} ke khate me Rs. ${fineAmount} ka Late Fine safaltapoorvak jod diya gaya! ✅` });
+  res.json({ 
+    message: `${member.name} के खाते में ₹${fineAmount} का लेट फाइन सफलतापूर्वक जोड़ दिया गया! ✅`,
+    data: {
+      memberId,
+      name: member.name,
+      phone: member.phone,
+      amount: fineAmount,
+      month: m,
+      year: y,
+      reason: reason || 'समय पर किश्त जमा न करने पर'
+    }
+  });
 });
 
 // Admin Reset Member Password

@@ -30,52 +30,69 @@ const upload = multer({
 // Submit payment (member or admin)
 router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
   const { amount, reference_no, note, month, year, late_fine, repayment_amount } = req.body;
-  if (!amount || !month || !year) {
-    return res.status(400).json({ error: 'Amount, month aur year zaroori hain.' });
+  if (!month || !year) {
+    return res.status(400).json({ error: 'महीना (Month) और वर्ष (Year) चुनना आवश्यक है।' });
   }
-  const screenshotPath = req.file ? `/uploads/${req.file.filename}` : null;
-  const fine = late_fine && parseFloat(late_fine) > 0 ? parseFloat(late_fine) : 0;
-  const repayment = repayment_amount && parseFloat(repayment_amount) > 0 ? parseFloat(repayment_amount) : 0;
 
-  // Check if already submitted for this month
-  const existing = db.prepare(
-    'SELECT id, amount, late_fine, repayment_amount FROM payments WHERE user_id = ? AND month = ? AND year = ? AND status != ?'
+  const installment = (amount !== undefined && amount !== null && amount !== '') ? parseFloat(amount) : 0;
+  const fine = (late_fine !== undefined && late_fine !== null && late_fine !== '') ? parseFloat(late_fine) : 0;
+  const repayment = (repayment_amount !== undefined && repayment_amount !== null && repayment_amount !== '') ? parseFloat(repayment_amount) : 0;
+
+  if (installment <= 0 && fine <= 0 && repayment <= 0) {
+    return res.status(400).json({ error: 'कृपया किश्त, लेट फाइन या उठाया हुआ पैसा वापसी में से कोई एक राशि दर्ज करें।' });
+  }
+
+  const screenshotPath = req.file ? `/uploads/${req.file.filename}` : null;
+  const initialStatus = req.user.role === 'admin' ? 'approved' : 'pending';
+
+  // 1. Kisht (installment) check: only allowed ONCE per month!
+  if (installment > 0) {
+    const existingKisht = db.prepare(
+      'SELECT id, amount, status FROM payments WHERE user_id = ? AND month = ? AND year = ? AND amount > 0 AND status != ?'
+    ).get(req.user.id, parseInt(month), parseInt(year), 'rejected');
+
+    if (existingKisht) {
+      return res.status(400).json({
+        error: `इस महीने (${month}/${year}) की किश्त (₹${existingKisht.amount}) पहले से ही जमा/पेंडिंग है। किश्त महीने में केवल एक बार जमा हो सकती है। यदि आप लेट फाइन या उठाया हुआ पैसा वापस जमा करना चाहते हैं, तो किश्त को 0 रखें।`
+      });
+    }
+  }
+
+  // 2. Check if there is an existing standalone fine-only record (amount = 0) to merge into if installment > 0
+  const existingFineOnly = db.prepare(
+    'SELECT id, amount, late_fine, repayment_amount FROM payments WHERE user_id = ? AND month = ? AND year = ? AND amount = 0 AND status != ?'
   ).get(req.user.id, parseInt(month), parseInt(year), 'rejected');
 
   let paymentId;
-  const initialStatus = req.user.role === 'admin' ? 'approved' : 'pending';
-
-  if (existing) {
-    if (existing.amount === 0) {
-      // Record was created as a standalone fine by Admin! Merge installment into it.
-      const totalFine = fine > 0 ? fine : (existing.late_fine || 0);
-      db.prepare(`
-        UPDATE payments 
-        SET amount = ?, late_fine = ?, repayment_amount = ?, screenshot_path = ?, reference_no = ?, note = ?, 
-            status = ?, submitted_at = CURRENT_TIMESTAMP, reviewed_at = ?
-        WHERE id = ?
-      `).run(
-        parseFloat(amount),
-        totalFine,
-        repayment,
-        screenshotPath,
-        reference_no || null,
-        note || null,
-        initialStatus,
-        initialStatus === 'approved' ? new Date().toISOString() : null,
-        existing.id
-      );
-      paymentId = existing.id;
-    } else {
-      return res.status(400).json({ error: 'Is mahine ka payment pehle se submit hai.' });
-    }
+  if (existingFineOnly && installment > 0) {
+    const totalFine = fine > 0 ? (existingFineOnly.late_fine + fine) : existingFineOnly.late_fine;
+    const totalRepayment = (existingFineOnly.repayment_amount || 0) + repayment;
+    db.prepare(`
+      UPDATE payments 
+      SET amount = ?, late_fine = ?, repayment_amount = ?, screenshot_path = COALESCE(?, screenshot_path), 
+          reference_no = COALESCE(?, reference_no), note = COALESCE(?, note), 
+          status = ?, submitted_at = CURRENT_TIMESTAMP, reviewed_at = ?
+      WHERE id = ?
+    `).run(
+      installment,
+      totalFine,
+      totalRepayment,
+      screenshotPath,
+      reference_no || null,
+      note || null,
+      initialStatus,
+      initialStatus === 'approved' ? new Date().toISOString() : null,
+      existingFineOnly.id
+    );
+    paymentId = existingFineOnly.id;
   } else {
+    // Insert new payment record (Late fine & Uthaya paisa repayment can be submitted UNLIMITED times in a month!)
     const result = db.prepare(`
       INSERT INTO payments (user_id, amount, late_fine, repayment_amount, screenshot_path, reference_no, note, month, year, status, reviewed_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       req.user.id, 
-      parseFloat(amount), 
+      installment, 
       fine, 
       repayment,
       screenshotPath, 
@@ -93,9 +110,11 @@ router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
   if (req.user.role !== 'admin') {
     const admin = db.prepare("SELECT phone FROM users WHERE role = 'admin' LIMIT 1").get();
     if (admin) {
+      const kishtMsg = installment > 0 ? `\nKisht: Rs. ${installment}` : '';
       const repMsg = repayment > 0 ? `\nUthaya Paisa Wapsi: Rs. ${repayment}` : '';
       const fineMsg = fine > 0 ? `\nLate Fine: Rs. ${fine}` : '';
-      notifyWhatsApp(admin.phone, `💰 Naya payment submit hua!\nMember: ${req.user.name}\nKisht: Rs. ${amount}${repMsg}${fineMsg}\nTotal: Rs. ${parseFloat(amount) + repayment + fine}\nMonth: ${month}/${year}\nRef: ${reference_no || 'N/A'}`);
+      const total = installment + repayment + fine;
+      notifyWhatsApp(admin.phone, `💰 Naya payment submit hua!\nMember: ${req.user.name}${kishtMsg}${repMsg}${fineMsg}\nTotal: Rs. ${total}\nMonth: ${month}/${year}\nRef: ${reference_no || 'N/A'}`);
     }
   }
 
@@ -181,6 +200,20 @@ router.put('/:id/approve', authMiddleware, adminOnly, (req, res) => {
     notifyWhatsApp(member.phone, `✅ Aapka payment approve ho gaya!\nAmount: Rs. ${payment.amount}${fineMsg}\nMonth: ${payment.month}/${payment.year}\n${admin_note ? 'Note: ' + admin_note : ''}\n- Mera Kameti`);
   }
 
+  // Insert in-app notification
+  try {
+    const fineMsg = fine > 0 ? ` (+ ₹${fine} लेट फाइन)` : '';
+    const repMsg = payment.repayment_amount > 0 ? ` (+ ₹${payment.repayment_amount} उठाया वापसी)` : '';
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type)
+      VALUES (?, ?, ?, 'payment_approved')
+    `).run(
+      payment.user_id,
+      `✅ पेमेंट स्वीकृत (Payment Approved) - ${payment.month}/${payment.year}`,
+      `आपकी ₹${payment.amount}${fineMsg}${repMsg} की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।`
+    );
+  } catch (err) {}
+
   res.json({ message: 'Payment approve ho gaya! ✅' });
 });
 
@@ -200,6 +233,18 @@ router.put('/:id/reject', authMiddleware, adminOnly, (req, res) => {
   if (member) {
     notifyWhatsApp(member.phone, `❌ Aapka payment reject ho gaya.\nAmount: Rs. ${payment.amount}\nMonth: ${payment.month}/${payment.year}\nReason: ${admin_note || 'Admin ne check kiya'}\nDobara submit karein.\n- Mera Kameti`);
   }
+
+  // Insert in-app notification
+  try {
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, message, type)
+      VALUES (?, ?, ?, 'payment_rejected')
+    `).run(
+      payment.user_id,
+      `❌ पेमेंट अस्वीकृत (Payment Rejected) - ${payment.month}/${payment.year}`,
+      `आपकी ₹${payment.amount} की पेमेंट अस्वीकृत कर दी गई है। कारण: ${admin_note || 'एडमिन द्वारा चेक किया गया'}`
+    );
+  } catch (err) {}
 
   res.json({ message: 'Payment reject ho gaya.' });
 });

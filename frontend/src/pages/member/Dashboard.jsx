@@ -13,9 +13,10 @@ export default function MemberDashboard() {
   const [summary, setSummary] = useState(null)
   const [recentPayments, setRecentPayments] = useState([])
   const [myStatement, setMyStatement] = useState(null)
+  const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Payout application state ("मुझे इस महीने इतना पैसा चाहिए")
+  // Payout application state ("मुझे इस महीने इतना पैसा चाहिए / Payout Bid")
   const [applyMonth, setApplyMonth] = useState(now.getMonth() + 1)
   const [applyYear, setApplyYear] = useState(now.getFullYear())
   const [requestedAmount, setRequestedAmount] = useState('')
@@ -28,11 +29,13 @@ export default function MemberDashboard() {
       api.get('/committee/summary'),
       api.get('/payments/my'),
       api.get('/auth/me'),
-      api.get('/committee/my-payout-requests')
-    ]).then(([s, p, me, pr]) => {
+      api.get('/committee/my-payout-requests'),
+      api.get('/notifications').catch(() => ({ data: { data: [] } }))
+    ]).then(([s, p, me, pr, notifRes]) => {
       setSummary(s.data.data)
       setRecentPayments(p.data.data.slice(0, 5))
       setMyPayoutRequests(pr.data.data || [])
+      setNotifications(notifRes.data?.data || [])
       if (me.data?.data?.id) {
         return api.get(`/members/${me.data.data.id}/statement`)
       }
@@ -51,7 +54,7 @@ export default function MemberDashboard() {
   const handleApplyPayout = async (e) => {
     e.preventDefault()
     if (!requestedAmount || parseFloat(requestedAmount) <= 0) {
-      return toast.error('कृपया मांगी जाने वाली राशि (Amount) दर्ज करें।')
+      return toast.error('कृपया मांगी जाने वाली राशि दर्ज करें / Please enter requested amount.')
     }
     setSubmittingPayout(true)
     try {
@@ -61,12 +64,12 @@ export default function MemberDashboard() {
         requested_amount: parseFloat(requestedAmount),
         reason: payoutReason
       })
-      toast.success(res.data.message || 'आवेदन सबमिट हो गया! ✅')
+      toast.success(res.data.message || 'आवेदन सबमिट हो गया! / Application submitted! ✅')
       setRequestedAmount('')
       setPayoutReason('')
       api.get('/committee/my-payout-requests').then(r => setMyPayoutRequests(r.data.data || []))
     } catch (err) {
-      toast.error(err.response?.data?.error || 'आवेदन सबमिट नहीं हो सका।')
+      toast.error(err.response?.data?.error || 'आवेदन सबमिट नहीं हो सका / Application failed.')
     } finally {
       setSubmittingPayout(false)
     }
@@ -80,10 +83,33 @@ export default function MemberDashboard() {
 
   const thisMonthPayment = recentPayments.find(p => p.month === now.getMonth() + 1 && p.year === now.getFullYear())
   const thisMonthRequest = myPayoutRequests.find(r => r.month === applyMonth && r.year === applyYear)
+  const lateFineNotifs = notifications.filter(n => n.type === 'late_fine')
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
       
+      {/* Late Fine In-App Notification Alert Banner */}
+      {lateFineNotifs.length > 0 && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 p-4 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-amber-300 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl animate-bounce shrink-0">⚡</span>
+            <div>
+              <div className="inline-flex items-center gap-1.5 bg-black/20 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1">
+                LATE FINE NOTICE / लेट फाइन सूचना
+              </div>
+              <h4 className="font-extrabold text-sm sm:text-base">{lateFineNotifs[0].title}</h4>
+              <p className="text-xs text-amber-100 mt-0.5">{lateFineNotifs[0].message}</p>
+            </div>
+          </div>
+          <Link
+            to="/pay"
+            className="bg-white text-amber-950 hover:bg-amber-50 px-4 py-2 rounded-xl text-xs font-black shadow-md transition-all shrink-0"
+          >
+            💳 लेट फाइन जमा करें / Pay Now →
+          </Link>
+        </div>
+      )}
+
       {/* Official WhatsApp Group Invite Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-[#25D366] p-5 sm:p-6 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-emerald-400/30">
         <div className="flex items-center gap-3.5">
@@ -95,9 +121,9 @@ export default function MemberDashboard() {
               <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
               OFFICIAL WHATSAPP GROUP
             </div>
-            <h3 className="font-black text-base sm:text-xl tracking-tight">कमिटी व्हाट्सएप ग्रुप से जुड़ें</h3>
+            <h3 className="font-black text-base sm:text-xl tracking-tight">कमिटी व्हाट्सएप ग्रुप / WhatsApp Group</h3>
             <p className="text-xs text-emerald-100 mt-0.5">
-              सभी किश्तों, विनर घोषणा और कमिटी सूचनाओं के लिए ग्रुप में जुड़े रहें
+              सभी किश्तों, विनर घोषणा और सूचनाओं के लिए ग्रुप में जुड़े रहें
             </p>
           </div>
         </div>
@@ -108,7 +134,7 @@ export default function MemberDashboard() {
           rel="noopener noreferrer"
           className="bg-white text-emerald-900 hover:bg-emerald-50 px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all shadow-lg flex items-center gap-2 shrink-0 transform hover:scale-105"
         >
-          <span>📲</span> ग्रुप में शामिल हों (Join Group) →
+          <span>📲</span> ग्रुप में शामिल हों / Join Group →
         </a>
       </div>
 
@@ -121,13 +147,13 @@ export default function MemberDashboard() {
           <div>
             <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-400/25 px-3 py-1 rounded-full text-xs font-bold text-emerald-300 mb-3">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              सदस्य पोर्टल (Member Portal)
+              सदस्य पोर्टल / Member Portal
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              खुशामदीद, {user?.name || 'सदस्य'}! 👋
+              खुशामदीद / Welcome, {user?.name || 'सदस्य'}! 👋
             </h1>
             <p className="text-slate-300 text-sm mt-1">
-              {MONTH_NAMES[now.getMonth() + 1]} {now.getFullYear()} — आपकी कमिटी का लाइव विवरण
+              {MONTH_NAMES[now.getMonth() + 1]} {now.getFullYear()} — आपकी कमिटी का लाइव विवरण / Live Status
             </p>
           </div>
 
@@ -136,25 +162,25 @@ export default function MemberDashboard() {
               to="/pay"
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2"
             >
-              <span>💳</span> किश्त / वापसी जमा करें
-            </Link>
-            <Link
-              to="/ledger"
-              className="bg-slate-700/80 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-600"
-            >
-              <span>📖</span> सबका खाता बही
+              <span>💳</span> किश्त व वापसी जमा करें / Pay Now
             </Link>
             <Link
               to="/history"
               className="bg-slate-700/80 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-600"
             >
-              <span>📜</span> मेरी पेमेंट्स
+              <span>📜</span> मेरी पेमेंट्स / My Payments
+            </Link>
+            <Link
+              to="/ledger"
+              className="bg-slate-700/80 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-600"
+            >
+              <span>📖</span> सबका खाता बही / Khata
             </Link>
             <Link
               to="/profile"
               className="bg-slate-700/80 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-600"
             >
-              <span>👤</span> मेरी प्रोफ़ाइल
+              <span>👤</span> मेरी प्रोफ़ाइल / Profile
             </Link>
           </div>
         </div>
@@ -169,7 +195,7 @@ export default function MemberDashboard() {
             <Link
               to="/profile"
               className="px-2.5 py-0.5 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold text-xs tracking-wider backdrop-blur-sm transition-all"
-              title="प्रोफ़ाइल व पासवर्ड बदलें"
+              title="प्रोफ़ाइल व पासवर्ड बदलें / Edit Profile"
             >
               EDIT ⚙️
             </Link>
@@ -199,32 +225,32 @@ export default function MemberDashboard() {
           <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
-                <span>💳</span> आपका व्यक्तिगत कमिटी खाता (Your Personal Khata)
+                <span>💳</span> आपका व्यक्तिगत कमिटी खाता (Your Personal Passbook)
               </h2>
-              <p className="text-xs text-slate-500">आपके द्वारा अब तक जमा की गई और उठाई गई कुल रकम</p>
+              <p className="text-xs text-slate-500">आपके द्वारा जमा की गई और उठाई गई कुल रकम का हिसाब</p>
             </div>
             <Link to="/history" className="text-emerald-700 text-xs font-bold hover:underline bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-              पूरी रसीद हिस्ट्री देखें →
+              पूरी रसीद हिस्ट्री / All Receipts →
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
             {/* Credit Card */}
             <div className="p-4 bg-gradient-to-br from-emerald-500/10 via-emerald-50 to-teal-50 rounded-2xl border border-emerald-200 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">आपने जमा किया (Credit)</span>
+                <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">कुल जमा / Total Credit</span>
                 <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">↑</span>
               </div>
               <p className="text-2xl font-black text-emerald-700 mt-2">
                 ₹ {myStatement.total_credit?.toLocaleString('en-IN') || 0}
               </p>
-              <p className="text-[11px] text-emerald-600 mt-1 font-medium">कुल स्वीकृत किश्तें</p>
+              <p className="text-[11px] text-emerald-600 mt-1 font-medium">स्वीकृत किश्तें / Approved</p>
             </div>
 
             {/* Debit Card */}
             <div className="p-4 bg-gradient-to-br from-rose-500/10 via-rose-50 to-orange-50 rounded-2xl border border-rose-200 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-rose-800 uppercase tracking-wider">आपने उठाया (Debit)</span>
+                <span className="text-xs font-bold text-rose-800 uppercase tracking-wider">कुल उठाया / Total Debit</span>
                 <span className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm">↓</span>
               </div>
               <p className="text-2xl font-black text-rose-600 mt-2">
@@ -235,10 +261,28 @@ export default function MemberDashboard() {
               </p>
             </div>
 
+            {/* Late Fine Card */}
+            <div className="p-4 bg-gradient-to-br from-amber-500/10 via-amber-50 to-orange-50 rounded-2xl border border-amber-200 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">लेट फाइन / Late Fine</span>
+                <span className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">⚡</span>
+              </div>
+              <p className="text-2xl font-black text-amber-700 mt-2">
+                ₹ {myStatement.total_late_fine?.toLocaleString('en-IN') || 0}
+              </p>
+              <p className="text-[11px] text-amber-600 mt-1 font-medium">
+                {myStatement.total_late_fine > 0 ? (
+                  <Link to="/pay" className="underline font-bold text-amber-800 hover:text-amber-950">
+                    अभी जमा करें / Pay →
+                  </Link>
+                ) : 'कोई जुर्माना नहीं'}
+              </p>
+            </div>
+
             {/* Net Balance Card */}
             <div className="p-4 bg-gradient-to-br from-indigo-500/10 via-indigo-50 to-blue-50 rounded-2xl border border-indigo-200 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-indigo-800 uppercase tracking-wider">नेट स्थिति (Net Balance)</span>
+                <span className="text-xs font-bold text-indigo-800 uppercase tracking-wider">नेट स्थिति / Net Balance</span>
                 <span className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">⚖️</span>
               </div>
               <p className={`text-2xl font-black mt-2 ${
@@ -254,7 +298,7 @@ export default function MemberDashboard() {
         </div>
       )}
 
-      {/* NEW FEATURE: Payout Application Form / Bidding ("🙋‍♂️ मुझे इस महीने कमिटी का पैसा चाहिए") */}
+      {/* Payout Application Form / Bidding */}
       <div className="card shadow-lg border border-amber-200 bg-gradient-to-br from-amber-50/40 via-white to-orange-50/30 space-y-4">
         <div className="flex flex-wrap justify-between items-start gap-2">
           <div>
@@ -262,7 +306,7 @@ export default function MemberDashboard() {
               🙋‍♂️ कमिटी लेने के लिए आवेदन (Apply for Committee Payout / Bid)
             </span>
             <h2 className="text-lg font-black text-slate-900 mt-2">
-              क्या आपको इस महीने कमिटी का पैसा उठाना है?
+              क्या आपको इस महीने कमिटी का पैसा उठाना है? / Need Funds This Month?
             </h2>
             <p className="text-xs text-slate-600 mt-0.5">
               अपनी इच्छित रकम और कारण दर्ज करके एडमिन को भेजें। एडमिन विनर चुनते समय आपका आवेदन देखेगा।
@@ -279,7 +323,7 @@ export default function MemberDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                📅 किस महीने के लिए?
+                📅 किस महीने के लिए? / Month
               </label>
               <select
                 className="input text-sm font-semibold"
@@ -294,7 +338,7 @@ export default function MemberDashboard() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                📅 वर्ष (Year)
+                📅 वर्ष / Year
               </label>
               <select
                 className="input text-sm font-semibold"
@@ -309,7 +353,7 @@ export default function MemberDashboard() {
 
             <div>
               <label className="block text-xs font-bold text-amber-900 uppercase mb-1">
-                💰 मुझे इतना पैसा चाहिए (Amount ₹) *
+                💰 मुझे इतना पैसा चाहिए / Amount (₹) *
               </label>
               <input
                 type="number"
@@ -325,7 +369,7 @@ export default function MemberDashboard() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-              📝 कारण या आवश्यकता (Reason / Note)
+              📝 कारण या आवश्यकता / Reason (Optional)
             </label>
             <input
               type="text"
@@ -338,14 +382,14 @@ export default function MemberDashboard() {
 
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <span className="text-xs text-slate-500">
-              💡 एडमिन इस आवेदन को देखकर इस माह का विनर चुनेंगे।
+              💡 एडमिन इस आवेदन को देखकर इस माह का विनर चुनेंगे / Admin reviews bids to declare winner.
             </span>
             <button
               type="submit"
               disabled={submittingPayout}
               className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md shadow-amber-600/30 transition-all flex items-center gap-1.5"
             >
-              {submittingPayout ? 'भेज रहे हैं...' : '🙋‍♂️ कमिटी लेने के लिए आवेदन सबमिट करें'}
+              {submittingPayout ? 'भेज रहे हैं...' : '🙋‍♂️ आवेदन सबमिट करें / Submit Bid'}
             </button>
           </div>
         </form>
@@ -354,7 +398,7 @@ export default function MemberDashboard() {
         {myPayoutRequests.length > 0 && (
           <div className="pt-3 border-t border-amber-200/60">
             <p className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
-              📋 आपके पिछले आवेदन (Your Applications):
+              📋 आपके पिछले आवेदन / Your Applications:
             </p>
             <div className="space-y-1.5">
               {myPayoutRequests.slice(0, 3).map(r => (
@@ -367,7 +411,7 @@ export default function MemberDashboard() {
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                     r.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                   }`}>
-                    {r.status === 'approved' ? '🏆 स्वीकृत (Won)' : '⏳ समीक्षाधीन (Pending)'}
+                    {r.status === 'approved' ? '🏆 स्वीकृत / Won' : '⏳ समीक्षाधीन / Pending'}
                   </span>
                 </div>
               ))}
@@ -380,7 +424,7 @@ export default function MemberDashboard() {
       <div className="card shadow-lg border border-slate-100">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-bold text-slate-800 flex items-center gap-2">
-            <span>📅</span> चालू माह भुगतान स्थिति ({MONTH_NAMES[now.getMonth() + 1]} {now.getFullYear()})
+            <span>📅</span> चालू माह भुगतान स्थिति / Payment Status ({MONTH_NAMES[now.getMonth() + 1]} {now.getFullYear()})
           </h2>
         </div>
 
@@ -399,9 +443,9 @@ export default function MemberDashboard() {
               <div>
                 <p className="font-extrabold text-base">
                   ₹ {thisMonthPayment.amount?.toLocaleString('en-IN')} — {
-                    thisMonthPayment.status === 'approved' ? 'किश्त स्वीकृत (Payment Approved)!' :
-                    thisMonthPayment.status === 'pending' ? 'एडमिन अप्रूवल का इंतज़ार है (Under Review)...' :
-                    'किश्त अस्वीकृत (Rejected)'
+                    thisMonthPayment.status === 'approved' ? 'किश्त स्वीकृत / Payment Approved!' :
+                    thisMonthPayment.status === 'pending' ? 'एडमिन अप्रूवल का इंतज़ार है / Under Review...' :
+                    'किश्त अस्वीकृत / Rejected'
                   }
                 </p>
                 <p className="text-xs text-slate-600 mt-0.5">
@@ -427,40 +471,40 @@ export default function MemberDashboard() {
             <div className="flex items-center gap-3">
               <span className="text-3xl">💸</span>
               <div>
-                <p className="font-bold text-amber-900">इस महीने की किश्त अभी जमा नहीं हुई है</p>
-                <p className="text-xs text-amber-700">कृपया लेट फीस से बचने के लिए समय पर UPI से भुगतान कर स्लिप अपलोड करें।</p>
+                <p className="font-bold text-amber-900">इस महीने की किश्त अभी जमा नहीं हुई है / Installment Pending</p>
+                <p className="text-xs text-amber-700">समय पर UPI से भुगतान कर स्लिप अपलोड करें और लेट फीस से बचें।</p>
               </div>
             </div>
             <Link
               to="/pay"
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-md inline-flex items-center justify-center gap-1.5"
             >
-              <span>📲</span> UPI से भुगतान करें
+              <span>📲</span> UPI से भुगतान करें / Pay
             </Link>
           </div>
         )}
       </div>
 
-      {/* Committee Overall Summary (Transparency for all members) */}
+      {/* Committee Overall Summary */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
           <div className="card text-center border border-slate-100 shadow-sm">
             <div className="text-xl sm:text-2xl font-black text-emerald-700">₹ {summary.overallTotalCredit?.toLocaleString('en-IN') || 0}</div>
-            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">🟢 कमिटी कुल जमा</div>
+            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">🟢 कुल जमा / Total Credit</div>
           </div>
           <div className="card text-center border border-slate-100 shadow-sm">
             <div className="text-xl sm:text-2xl font-black text-rose-600">₹ {summary.overallTotalDebit?.toLocaleString('en-IN') || 0}</div>
-            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">🔴 कमिटी कुल भुगतान</div>
+            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">🔴 कुल भुगतान / Total Debit</div>
           </div>
           <div className="card text-center border border-slate-100 shadow-sm">
             <div className="text-xl sm:text-2xl font-black text-blue-600">{summary.paidMembers}/{summary.totalMembers}</div>
-            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">इस माह जमा सदस्य</div>
+            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">इस माह जमा / Paid Members</div>
           </div>
           <div className="card text-center border border-slate-100 shadow-sm">
             <div className="text-lg sm:text-xl font-black text-amber-600 truncate">
               {summary.winner ? `🏆 ${summary.winner.winner_name}` : '⏳ तय नहीं'}
             </div>
-            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">इस माह का विनर</div>
+            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">इस माह का विनर / Winner</div>
           </div>
         </div>
       )}
@@ -472,14 +516,14 @@ export default function MemberDashboard() {
             <span>📋</span> आपकी हालिया पेमेंट्स (Recent Payments)
           </h2>
           <Link to="/history" className="text-emerald-700 text-xs font-bold hover:underline">
-            सब देखें →
+            सब देखें / View All →
           </Link>
         </div>
 
         {recentPayments.length === 0 ? (
           <div className="text-center py-8 text-slate-400">
             <span className="text-4xl block mb-2">🧾</span>
-            <p className="text-sm">कोई पेमेंट रिकॉर्ड नहीं मिला।</p>
+            <p className="text-sm">कोई पेमेंट रिकॉर्ड नहीं मिला / No payments found.</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100">

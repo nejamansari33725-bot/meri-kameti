@@ -58,7 +58,7 @@ export default function SubmitPayment() {
   const copyUpi = () => {
     navigator.clipboard.writeText(paymentConfig.upi_id)
     setCopied(true)
-    toast.success('UPI ID कॉपी हो गई! ✅')
+    toast.success('UPI ID कॉपी हो गई! / UPI ID copied! ✅')
     setTimeout(() => setCopied(false), 2500)
   }
 
@@ -70,6 +70,12 @@ export default function SubmitPayment() {
     }
   }
 
+  // Check if installment is already submitted/paid for the selected month & year
+  const existingInstallmentPayment = myStatement?.payments?.find(
+    p => p.month === form.month && p.year === form.year && p.amount > 0 && p.status !== 'rejected'
+  )
+  const isInstallmentAlreadyPaid = Boolean(existingInstallmentPayment)
+
   const installment = parseFloat(form.installment_amount) || 0
   const fine = parseFloat(form.late_fine) || 0
   const repayment = parseFloat(form.repayment_amount) || 0
@@ -77,8 +83,13 @@ export default function SubmitPayment() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (installment <= 0 && repayment <= 0) {
-      return toast.error('कृपया महीने की किश्त राशि या उठाया हुआ पैसा वापसी दर्ज करें।')
+
+    if (installment <= 0 && fine <= 0 && repayment <= 0) {
+      return toast.error('कृपया किश्त, लेट फाइन या उठाया पैसा वापसी में से कोई एक राशि भरें। / Please enter an amount.')
+    }
+
+    if (isInstallmentAlreadyPaid && installment > 0) {
+      return toast.error(`इस माह की किश्त पहले ही जमा है। कृपया किश्त 0 रखें और लेट फाइन या उठाया हुआ पैसा वापस जमा करें।`)
     }
 
     setLoading(true)
@@ -97,7 +108,7 @@ export default function SubmitPayment() {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 
-      toast.success(res.data.message || 'Payment सबमिट हो गया! ✅')
+      toast.success(res.data.message || 'Payment सबमिट हो गया! / Payment submitted successfully! ✅')
       setForm({ 
         installment_amount: '', 
         late_fine: '0', 
@@ -120,7 +131,7 @@ export default function SubmitPayment() {
       }).catch(() => {})
 
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Submit फेल हो गया।')
+      toast.error(err.response?.data?.error || 'Submit फेल हो गया। / Submission failed.')
     } finally {
       setLoading(false)
     }
@@ -134,14 +145,14 @@ export default function SubmitPayment() {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-          <span>💳</span> किश्त एवं लेट फाइन भुगतान (Pay Installment)
+          <span>💳</span> किश्त एवं लेट फाइन भुगतान (Pay Installment / Fine / Return)
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          कमिटी की मासिक किश्त, लेट फाइन या उठाया हुआ पैसा वापस जमा करें और रसीद अपलोड करें
+          कमिटी किश्त (1 बार), लेट फाइन या उठाया हुआ पैसा (जितनी बार चाहें) जमा करें
         </p>
       </div>
 
-      {/* Member's Passbook & Payout Status Box (जो पैसा उठाया है उसका विवरण) */}
+      {/* Member's Passbook & Payout Status Box */}
       {myStatement && (
         <div className="card bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white border border-slate-700/60 shadow-xl space-y-4">
           <div className="flex flex-wrap justify-between items-center gap-2 border-b border-slate-700/60 pb-3">
@@ -150,14 +161,14 @@ export default function SubmitPayment() {
                 YOUR COMMITTEE PASSBOOK
               </span>
               <h2 className="text-base font-black text-white flex items-center gap-2 mt-0.5">
-                <span>📖</span> आपका व्यक्तिगत खाता विवरण
+                <span>📖</span> आपका व्यक्तिगत खाता विवरण / Your Passbook
               </h2>
             </div>
             <Link
               to="/history"
               className="text-xs text-emerald-300 hover:text-emerald-200 underline font-semibold"
             >
-              रसीद हिस्ट्री →
+              रसीद हिस्ट्री / Receipts →
             </Link>
           </div>
 
@@ -165,7 +176,7 @@ export default function SubmitPayment() {
             {/* 1. Paisa Uthaya Hai ya nahi */}
             <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
               <span className="text-[11px] text-rose-300 font-bold uppercase block">
-                🔴 उठाया गया पैसा
+                🔴 उठाया पैसा / Debit
               </span>
               <p className="text-lg sm:text-xl font-black text-white mt-1">
                 ₹ {myStatement.total_debit?.toLocaleString('en-IN') || 0}
@@ -180,7 +191,7 @@ export default function SubmitPayment() {
             {/* 2. Jama Kiya */}
             <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
               <span className="text-[11px] text-emerald-300 font-bold uppercase block">
-                🟢 कुल जमा किया
+                🟢 कुल जमा / Credit
               </span>
               <p className="text-lg sm:text-xl font-black text-white mt-1">
                 ₹ {myStatement.total_credit?.toLocaleString('en-IN') || 0}
@@ -191,7 +202,7 @@ export default function SubmitPayment() {
             {/* 3. Late Fine */}
             <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
               <span className="text-[11px] text-amber-300 font-bold uppercase block">
-                ⚡ कुल लेट फाइन
+                ⚡ लेट फाइन / Late Fine
               </span>
               <p className="text-lg sm:text-xl font-black text-white mt-1">
                 ₹ {myStatement.total_late_fine?.toLocaleString('en-IN') || 0}
@@ -202,7 +213,7 @@ export default function SubmitPayment() {
             {/* 4. Net Khata */}
             <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
               <span className="text-[11px] text-indigo-300 font-bold uppercase block">
-                ⚖️ नेट बैलेंस
+                ⚖️ नेट बैलेंस / Net
               </span>
               <p className="text-lg sm:text-xl font-black text-white mt-1">
                 ₹ {myStatement.net_balance?.toLocaleString('en-IN') || 0}
@@ -218,10 +229,10 @@ export default function SubmitPayment() {
       {/* Payment Submission Form */}
       <div className="card shadow-lg border border-slate-200">
         <h2 className="text-lg font-black text-slate-800 mb-1 flex items-center gap-2">
-          <span>📝</span> पेमेंट सबमिट फॉर्म (Payment Submission)
+          <span>📝</span> पेमेंट सबमिट फॉर्म (Payment Submission Form)
         </h2>
         <p className="text-xs text-slate-500 mb-5">
-          किश्त, लेट फीस और उठाया हुआ पैसा वापसी की रकम दर्ज करें और रसीद स्क्रीनशॉट अपलोड करें
+          किश्त (मासिक), लेट फाइन और उठाया हुआ पैसा वापस जमा करने का विवरण भरें
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -230,7 +241,7 @@ export default function SubmitPayment() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                📅 किस महीने की किश्त है? *
+                📅 किस महीने का भुगतान है? / Month *
               </label>
               <select
                 className="input font-semibold"
@@ -244,7 +255,7 @@ export default function SubmitPayment() {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                📅 साल (Year) *
+                📅 साल / Year *
               </label>
               <select
                 className="input font-semibold"
@@ -258,26 +269,44 @@ export default function SubmitPayment() {
             </div>
           </div>
 
+          {/* Alert if Installment Already Paid for this Month */}
+          {isInstallmentAlreadyPaid && (
+            <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 flex items-start gap-2">
+              <span className="text-base">✅</span>
+              <div>
+                <strong>इस महीने ({MONTH_NAMES[form.month]} {form.year}) की किश्त पहले ही जमा हो चुकी है!</strong>
+                <p className="text-[11px] text-emerald-700 mt-0.5">
+                  किश्त महीने में केवल 1 बार जमा होती है। लेकिन आप <strong>उठाया हुआ पैसा वापस (Repayment)</strong> या <strong>लेट फाइन (Late Fine)</strong> महीने में जितनी बार चाहें जमा कर सकते हैं।
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* 1. Installment Amount & Late Fine Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200">
             <div>
-              <label className="block text-xs font-bold text-emerald-800 uppercase mb-1 flex items-center gap-1">
-                <span>💵</span> महीने की किश्त (Installment ₹) *
+              <label className="block text-xs font-bold text-emerald-800 uppercase mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1">💵 महीने की किश्त / Installment (₹)</span>
+                <span className="text-[10px] text-slate-400 font-normal">माह में 1 बार</span>
               </label>
               <input
                 type="number"
-                className="input font-bold text-slate-900 text-lg bg-white"
-                placeholder="e.g. 2000, 5000"
+                className={`input font-bold text-lg bg-white ${isInstallmentAlreadyPaid ? 'text-slate-400 bg-slate-100 cursor-not-allowed' : 'text-slate-900'}`}
+                placeholder={isInstallmentAlreadyPaid ? 'किश्त पहले ही जमा है (0)' : 'e.g. 2000, 5000'}
                 min="0"
-                value={form.installment_amount}
+                disabled={isInstallmentAlreadyPaid}
+                value={isInstallmentAlreadyPaid ? '0' : form.installment_amount}
                 onChange={e => setForm({ ...form, installment_amount: e.target.value })}
               />
-              <p className="text-[11px] text-slate-500 mt-1">आपकी नियमित मासिक किश्त</p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {isInstallmentAlreadyPaid ? '✓ किश्त जमा हो चुकी है' : 'नियमित मासिक किश्त (Only once a month)'}
+              </p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-amber-800 uppercase mb-1 flex items-center gap-1">
-                <span>⚡</span> लेट फाइन (Late Fine ₹)
+              <label className="block text-xs font-bold text-amber-800 uppercase mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1">⚡ लेट फाइन / Late Fine (₹)</span>
+                <span className="text-[10px] text-amber-700 font-normal">जितनी बार चाहें</span>
               </label>
               <input
                 type="number"
@@ -287,19 +316,19 @@ export default function SubmitPayment() {
                 value={form.late_fine}
                 onChange={e => setForm({ ...form, late_fine: e.target.value })}
               />
-              <p className="text-[11px] text-slate-500 mt-1">यदि लेट फीस लगी हो (अन्यथा 0)</p>
+              <p className="text-[11px] text-slate-500 mt-1">यदि लेट फीस लगी हो (Can pay anytime)</p>
             </div>
           </div>
 
-          {/* 2. Custom Repayment for Withdrawn Committee Money (उठाया हुआ पैसा वापसी) */}
+          {/* 2. Custom Repayment for Withdrawn Committee Money */}
           <div className="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-200">
             <div className="flex justify-between items-center mb-1">
               <label className="text-xs font-bold text-indigo-900 uppercase flex items-center gap-1">
-                <span>🔄</span> उठाया हुआ पैसा वापस जमा (Repay Withdrawn Money ₹)
+                <span>🔄</span> उठाया हुआ पैसा वापस जमा / Repay Withdrawn Money (₹)
               </label>
               {myStatement && (
                 <span className="text-[11px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-full border border-indigo-200">
-                  बकाया उठाया: ₹{(myStatement.total_debit || 0).toLocaleString('en-IN')}
+                  कुल उठाया बकाया: ₹{(myStatement.total_debit || 0).toLocaleString('en-IN')}
                 </span>
               )}
             </div>
@@ -312,7 +341,7 @@ export default function SubmitPayment() {
               onChange={e => setForm({ ...form, repayment_amount: e.target.value })}
             />
             <p className="text-[11px] text-slate-600 mt-1">
-              💡 यदि आपने पहले कमिटी उठाई है, तो इस महीने जितना पैसा लौटाना चाहते हैं दर्ज करें (यह आपके बकाये से तुरंत कम हो जाएगा)।
+              💡 <strong>सुविधा:</strong> उठाया हुआ पैसा आप महीने में कितनी भी बार (1 बार, 2 बार, 5 बार) अपनी मर्जी से थोड़ा-थोड़ा करके वापस जमा कर सकते हैं। यह आपके बकाये से तुरंत कम हो जाएगा।
             </p>
           </div>
 
@@ -320,7 +349,7 @@ export default function SubmitPayment() {
           <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-50 to-emerald-50 border border-emerald-300 flex items-center justify-between">
             <div>
               <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">
-                💰 कुल देय राशि (Total Payable Amount)
+                💰 कुल देय राशि / Total Payable Amount
               </span>
               <p className="text-xs text-slate-600 mt-0.5">
                 (किश्त: ₹{installment.toLocaleString('en-IN')} + फाइन: ₹{fine.toLocaleString('en-IN')} + उठाया वापसी: ₹{repayment.toLocaleString('en-IN')})
@@ -361,7 +390,7 @@ export default function SubmitPayment() {
               ) : (
                 <div className="text-slate-400 py-3">
                   <div className="text-4xl mb-1">📷</div>
-                  <p className="text-sm font-bold text-slate-700">पेमेंट का स्क्रीनशॉट यहाँ अपलोड करें</p>
+                  <p className="text-sm font-bold text-slate-700">पेमेंट का स्क्रीनशॉट यहाँ अपलोड करें / Upload Screenshot</p>
                   <p className="text-xs text-slate-400 mt-0.5">JPG, PNG, WebP — क्लिक करें</p>
                 </div>
               )}
@@ -373,14 +402,14 @@ export default function SubmitPayment() {
                 onClick={() => { setScreenshot(null); setPreview(null) }}
                 className="text-rose-600 text-xs mt-1.5 hover:underline font-bold"
               >
-                ✕ दूसरा स्क्रीनशॉट चुनें
+                ✕ दूसरा स्क्रीनशॉट चुनें / Choose Another
               </button>
             )}
           </div>
 
           {/* Note */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">📝 Note (टिप्पणी / संदेश)</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">📝 Note / टिप्पणी (Optional)</label>
             <textarea
               className="input text-sm"
               placeholder="कोई टिप्पणी या मैसेज (वैकल्पिक)..."
@@ -395,7 +424,7 @@ export default function SubmitPayment() {
             disabled={loading}
             className="btn-primary w-full py-3.5 text-base font-bold shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
           >
-            {loading ? '⏳ सबमिट हो रहा है...' : `✅ ₹ ${totalPayable.toLocaleString('en-IN')} पेमेंट सबमिट करें`}
+            {loading ? '⏳ सबमिट हो रहा है...' : `✅ ₹ ${totalPayable.toLocaleString('en-IN')} पेमेंट सबमिट करें / Submit Payment`}
           </button>
         </form>
       </div>
@@ -404,13 +433,13 @@ export default function SubmitPayment() {
       <div className="card bg-gradient-to-br from-emerald-50 via-white to-green-50 border border-emerald-200 shadow-sm space-y-4">
         <div className="text-center">
           <span className="inline-block bg-emerald-100 text-emerald-800 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider mb-2">
-            📲 Scan & Pay (ऑनलाइन भुगतान)
+            📲 Scan & Pay / ऑनलाइन भुगतान
           </span>
           <h2 className="text-xl font-black text-slate-900">
             कमेटी का पैसा इस QR या UPI पर भेजें
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            खाता धारक: <span className="font-bold text-slate-800">{paymentConfig.upi_name}</span>
+            खाता धारक / Account Name: <span className="font-bold text-slate-800">{paymentConfig.upi_name}</span>
           </p>
         </div>
 
@@ -461,10 +490,10 @@ export default function SubmitPayment() {
 
         {/* Instructions */}
         <div className="text-xs text-slate-600 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 space-y-2">
-          <p className="font-bold text-emerald-900 mb-1">📌 पेमेंट करने का तरीका:</p>
+          <p className="font-bold text-emerald-900 mb-1">📌 पेमेंट करने का तरीका / Instructions:</p>
           <p>1. ऊपर दिया गया QR कोड स्कैन करें या UPI ID पर पेमेंट करें।</p>
           <p>2. पेमेंट सफल होने के बाद उसका <strong>Screenshot</strong> लें।</p>
-          <p>3. ऊपर वाले फॉर्म में किश्त, लेट फाइन और उठाया वापसी दर्ज करें, स्क्रीनशॉट अपलोड कर <strong>"पेमेंट सबमिट करें"</strong> दबाएं।</p>
+          <p>3. ऊपर वाले फॉर्म में किश्त, लेट फाइन या उठाया वापसी दर्ज करें, स्क्रीनशॉट अपलोड कर <strong>"पेमेंट सबमिट करें"</strong> दबाएं।</p>
           
           <div className="pt-1 border-t border-emerald-200/60">
             <a
@@ -473,7 +502,7 @@ export default function SubmitPayment() {
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-1.5 w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-sm"
             >
-              <span>💬</span> आधिकारिक कमिटी व्हाट्सएप ग्रुप से जुड़ें
+              <span>💬</span> आधिकारिक कमिटी व्हाट्सएप ग्रुप से जुड़ें / Join Group
             </a>
           </div>
         </div>

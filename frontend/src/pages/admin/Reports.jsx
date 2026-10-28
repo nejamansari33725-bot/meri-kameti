@@ -19,7 +19,7 @@ export default function Reports() {
       const res = await api.get(`/reports/monthly?month=${month}&year=${year}`)
       setReport(res.data.data)
     } catch (err) {
-      toast.error('Report load nahi hui.')
+      toast.error('रिपोर्ट लोड नहीं हो पाई। / Report load failed.')
     } finally {
       setLoading(false)
     }
@@ -35,9 +35,9 @@ export default function Reports() {
       a.download = `mera-kameti-${MONTH_NAMES[month]}-${year}.pdf`
       a.click()
       window.URL.revokeObjectURL(url)
-      toast.success('PDF download ho gaya! 📄')
+      toast.success('PDF डाउनलोड हो गया! / PDF downloaded! 📄')
     } catch {
-      toast.error('PDF download fail.')
+      toast.error('PDF डाउनलोड विफल / PDF download failed.')
     } finally {
       setPdfLoading(false)
     }
@@ -46,27 +46,28 @@ export default function Reports() {
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-6">
       <div className="card">
-        <h1 className="text-2xl font-bold text-primary-700 mb-4">📊 Monthly Reports</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-1">📊 मासिक रिपोर्ट / Monthly Reports</h1>
+        <p className="text-xs text-slate-500 mb-4">महीने का कुल कलेक्शन, पेमेंट्स और विनर विवरण देखें व PDF डाउनलोड करें</p>
 
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-            <select className="input w-40" value={month} onChange={e => setMonth(parseInt(e.target.value))}>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">महीना / Month</label>
+            <select className="input w-40 text-sm" value={month} onChange={e => setMonth(parseInt(e.target.value))}>
               {MONTH_NAMES.slice(1).map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-            <select className="input w-28" value={year} onChange={e => setYear(parseInt(e.target.value))}>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">वर्ष / Year</label>
+            <select className="input w-28 text-sm" value={year} onChange={e => setYear(parseInt(e.target.value))}>
               {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
           <button onClick={loadReport} disabled={loading} className="btn-primary">
-            {loading ? '⏳ Load...' : '📊 Report Load Karein'}
+            {loading ? '⏳ लोड हो रहा है...' : '📊 रिपोर्ट देखें / View Report'}
           </button>
           {report && (
             <button onClick={downloadPdf} disabled={pdfLoading} className="btn-secondary">
-              {pdfLoading ? '⏳...' : '📥 PDF Download'}
+              {pdfLoading ? '⏳ डाउनलोडिंग...' : '📥 PDF डाउनलोड / Download'}
             </button>
           )}
         </div>
@@ -74,45 +75,51 @@ export default function Reports() {
 
       {report && (
         <>
-          {/* Summary */}
+          {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="card text-center">
-              <div className="text-3xl font-bold text-primary-600">Rs. {report.totalCollected?.toFixed(0)}</div>
-              <div className="text-sm text-gray-500 mt-1">💰 Total Collected</div>
+            <div className="card text-center bg-emerald-50/50 border-emerald-200">
+              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-700">₹ {report.totalCollected?.toLocaleString('en-IN')}</div>
+              <div className="text-xs font-semibold text-emerald-900 mt-1">💰 कुल जमा / Total Collected</div>
             </div>
-            <div className="card text-center">
-              <div className="text-3xl font-bold text-blue-600">{report.payments.length}</div>
-              <div className="text-sm text-gray-500 mt-1">📋 Total Payments</div>
+            <div className="card text-center bg-blue-50/50 border-blue-200">
+              <div className="text-2xl sm:text-3xl font-extrabold text-blue-700">{report.payments.length}</div>
+              <div className="text-xs font-semibold text-blue-900 mt-1">📋 कुल पेमेंट्स / Total Payments</div>
             </div>
-            <div className="card text-center col-span-2 md:col-span-1">
-              <div className="text-xl font-bold text-yellow-600">{report.winner?.winner_name || '—'}</div>
-              <div className="text-sm text-gray-500 mt-1">🏆 Winner</div>
+            <div className="card text-center bg-amber-50/50 border-amber-200 col-span-2 md:col-span-1">
+              <div className="text-xl sm:text-2xl font-extrabold text-amber-700">{report.winner?.winner_name || '—'}</div>
+              <div className="text-xs font-semibold text-amber-900 mt-1">🏆 कमिटी विनर / Winner</div>
             </div>
           </div>
 
           {/* Payment table */}
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-4">{MONTH_NAMES[month]} {year} — All Payments</h2>
+            <h2 className="font-bold text-slate-800 mb-4">{MONTH_NAMES[month]} {year} — सभी भुगतान / All Payments</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-500">
-                    <th className="pb-3 pr-4">Member</th>
-                    <th className="pb-3 pr-4">Phone</th>
-                    <th className="pb-3 pr-4">Amount</th>
-                    <th className="pb-3 pr-4">Reference</th>
-                    <th className="pb-3">Status</th>
+                  <tr className="border-b border-slate-200 text-left text-slate-500 bg-slate-50/80 text-xs">
+                    <th className="py-2.5 px-3">सदस्य / Member</th>
+                    <th className="py-2.5 px-3">फोन / Phone</th>
+                    <th className="py-2.5 px-3 text-right">राशि / Amount (₹)</th>
+                    <th className="py-2.5 px-3">रेफरेंस / Ref UTR</th>
+                    <th className="py-2.5 px-3 text-center">स्थिति / Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-100">
                   {report.payments.map(p => (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="py-3 pr-4 font-medium">{p.member_name}</td>
-                      <td className="py-3 pr-4 text-gray-600">{p.member_phone}</td>
-                      <td className="py-3 pr-4 font-bold text-primary-700">Rs. {p.amount}</td>
-                      <td className="py-3 pr-4 text-gray-600">{p.reference_no || '—'}</td>
-                      <td className="py-3">
-                        <span className={`badge-${p.status}`}>{p.status}</span>
+                    <tr key={p.id} className="hover:bg-slate-50/80">
+                      <td className="py-3 px-3 font-semibold text-slate-900">{p.member_name}</td>
+                      <td className="py-3 px-3 font-mono text-xs text-slate-600">{p.member_phone}</td>
+                      <td className="py-3 px-3 text-right font-black text-emerald-700">₹ {parseFloat(p.amount).toLocaleString('en-IN')}</td>
+                      <td className="py-3 px-3 font-mono text-xs text-slate-500">{p.reference_no || '—'}</td>
+                      <td className="py-3 px-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                          p.status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
+                          p.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                          'bg-rose-100 text-rose-800'
+                        }`}>
+                          {p.status === 'approved' ? 'स्वीकृत / Approved' : p.status === 'pending' ? 'पेंडिंग / Pending' : 'अस्वीकृत / Rejected'}
+                        </span>
                       </td>
                     </tr>
                   ))}
