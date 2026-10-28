@@ -66,6 +66,11 @@ try {
   db.exec(`ALTER TABLE payments ADD COLUMN late_fine REAL DEFAULT 0;`);
 } catch (e) {}
 
+// Add profile_photo column to users if not exists
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN profile_photo TEXT;`);
+} catch (e) {}
+
 // Seed default settings if not exists
 const defaultSettings = [
   ['committee_name', 'Mera Kameti'],

@@ -2,9 +2,32 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
 const db = require('../database');
 const { authMiddleware } = require('../middleware/auth');
 const { notifyWhatsApp } = require('../utils/whatsapp');
+
+// Multer setup for profile photo uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar_${Date.now()}${ext}`);
+  }
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    if (allowed.test(path.extname(file.originalname).toLowerCase())) {
+      cb(null, true);
+    } else {
+      cb(new Error('Sirf images allow hain (jpg, png, webp).'));
+    }
+  }
+});
 
 // Register - New members require Admin approval
 router.post('/register', (req, res) => {
@@ -84,13 +107,13 @@ router.post('/login', (req, res) => {
 
 // Get current user
 router.get('/me', authMiddleware, (req, res) => {
-  const user = db.prepare('SELECT id, name, phone, email, role, status, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, name, phone, email, profile_photo, role, status, created_at FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User nahi mila.' });
   res.json({ data: user });
 });
 
-// Update Profile & Login Details (Phone, Password, Name)
-router.put('/profile', authMiddleware, (req, res) => {
+// Update Profile & Login Details (Phone, Password, Name, Email, Photo)
+router.put('/profile', authMiddleware, upload.single('photo'), (req, res) => {
   const { name, phone, current_password, new_password, email } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User nahi mila.' });
@@ -121,16 +144,17 @@ router.put('/profile', authMiddleware, (req, res) => {
   const updatedName = name || user.name;
   const updatedPhone = phone || user.phone;
   const updatedEmail = email !== undefined ? email : user.email;
+  const photoUrl = req.file ? `/uploads/${req.file.filename}` : user.profile_photo;
 
   db.prepare(`
     UPDATE users 
-    SET name = ?, phone = ?, password = ?, email = ?
+    SET name = ?, phone = ?, password = ?, email = ?, profile_photo = ?
     WHERE id = ?
-  `).run(updatedName, updatedPhone, newHashed, updatedEmail, user.id);
+  `).run(updatedName, updatedPhone, newHashed, updatedEmail, photoUrl, user.id);
 
   // Generate new token with updated details
   const token = jwt.sign(
-    { id: user.id, name: updatedName, phone: updatedPhone, role: user.role },
+    { id: user.id, name: updatedName, phone: updatedPhone, role: user.role, profile_photo: photoUrl },
     (process.env.JWT_SECRET || 'mera_kameti_fallback_secret_2024'),
     { expiresIn: '7d' }
   );
@@ -140,7 +164,9 @@ router.put('/profile', authMiddleware, (req, res) => {
     token,
     role: user.role,
     name: updatedName,
-    phone: updatedPhone
+    phone: updatedPhone,
+    email: updatedEmail,
+    profile_photo: photoUrl
   });
 });
 

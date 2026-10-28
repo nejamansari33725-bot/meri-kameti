@@ -16,6 +16,7 @@ import Members from './pages/admin/Members'
 import CommitteeWinner from './pages/admin/CommitteeWinner'
 import Reports from './pages/admin/Reports'
 import AdminSettings from './pages/admin/AdminSettings'
+import Profile from './pages/member/Profile'
 
 function AppRoutes() {
   const { user } = useAuth()
@@ -30,6 +31,7 @@ function AppRoutes() {
 
           {/* Member & Shared routes */}
           <Route path="/dashboard" element={<ProtectedRoute><MemberDashboard /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/pay" element={<ProtectedRoute><SubmitPayment /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
           <Route path="/ledger" element={<ProtectedRoute><KhataLedger /></ProtectedRoute>} />

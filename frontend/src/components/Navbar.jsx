@@ -18,6 +18,7 @@ export default function Navbar() {
     { to: '/ledger', label: '📖 खाता बही' },
     { to: '/pay', label: '💰 पेमेंट करें' },
     { to: '/history', label: '📋 मेरी हिस्ट्री' },
+    { to: '/profile', label: '👤 मेरी प्रोफ़ाइल' },
   ]
 
   const adminLinks = [
@@ -28,6 +29,7 @@ export default function Navbar() {
     { to: '/admin/members', label: '👥 मेम्बर्स' },
     { to: '/admin/committee', label: '🏆 विनर चुनें' },
     { to: '/admin/reports', label: '📊 रिपोर्ट्स' },
+    { to: '/profile', label: '👤 प्रोफ़ाइल' },
     { to: '/admin/settings', label: '⚙️ सेटिंग्स' },
   ]
 
@@ -93,10 +95,15 @@ export default function Navbar() {
               <span className="sm:hidden">ग्रुप</span>
             </a>
 
-            <div className="hidden md:flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/60">
+            <Link
+              to="/profile"
+              className="hidden md:flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700/60 hover:border-emerald-500/50 transition-all group"
+              title="अपनी प्रोफ़ाइल देखें व एडिट करें"
+            >
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-xs text-slate-200 font-semibold">{user?.name}</span>
-            </div>
+              <span className="text-xs text-slate-200 group-hover:text-emerald-300 font-semibold">{user?.name}</span>
+              <span className="text-[10px] text-slate-400">⚙️</span>
+            </Link>
             <button
               onClick={handleLogout}
               className="bg-slate-800 hover:bg-rose-900/60 hover:text-rose-200 text-slate-300 text-xs px-3 py-1.5 rounded-xl transition-all font-semibold border border-slate-700/70 shadow-sm"

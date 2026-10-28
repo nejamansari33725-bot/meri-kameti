@@ -110,6 +110,12 @@ export default function MemberDashboard() {
             >
               <span>📜</span> मेरी पेमेंट्स
             </Link>
+            <Link
+              to="/profile"
+              className="bg-slate-700/80 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-600"
+            >
+              <span>👤</span> मेरी प्रोफ़ाइल
+            </Link>
           </div>
         </div>
 
@@ -120,9 +126,13 @@ export default function MemberDashboard() {
               <p className="text-[10px] uppercase tracking-widest text-emerald-200 font-bold">Mera Kameti Card</p>
               <p className="text-base font-extrabold tracking-wide mt-0.5">मेरा कमिटी पासबुक</p>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white font-bold text-xs tracking-wider backdrop-blur-sm">
-              ACTIVE
-            </span>
+            <Link
+              to="/profile"
+              className="px-2.5 py-0.5 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold text-xs tracking-wider backdrop-blur-sm transition-all"
+              title="प्रोफ़ाइल व पासवर्ड बदलें"
+            >
+              EDIT ⚙️
+            </Link>
           </div>
 
           {/* Chip and Details */}
