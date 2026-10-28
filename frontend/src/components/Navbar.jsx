@@ -15,12 +15,14 @@ export default function Navbar() {
 
   const memberLinks = [
     { to: '/dashboard', label: '🏠 Dashboard' },
+    { to: '/ledger', label: '📖 खाता बही (Khata)' },
     { to: '/pay', label: '💰 Payment Submit' },
-    { to: '/history', label: '📋 History' },
+    { to: '/history', label: '📋 My History' },
   ]
 
   const adminLinks = [
     { to: '/admin', label: '🏠 Dashboard' },
+    { to: '/admin/ledger', label: '📖 खाता बही (Khata)' },
     { to: '/admin/approvals', label: '✅ Approvals' },
     { to: '/admin/members', label: '👥 Members' },
     { to: '/admin/committee', label: '🏆 Committee' },
@@ -30,23 +32,23 @@ export default function Navbar() {
   const links = isAdmin ? adminLinks : memberLinks
 
   return (
-    <nav className="bg-primary-600 text-white shadow-lg">
+    <nav className="bg-primary-600 text-white shadow-lg sticky top-0 z-40">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <span className="text-2xl">💰</span>
-            <span className="text-xl font-bold">Mera Kameti</span>
-            {isAdmin && <span className="bg-yellow-400 text-yellow-900 text-xs px-2 py-0.5 rounded-full font-semibold ml-2">ADMIN</span>}
-          </div>
+            <span className="text-xl font-bold tracking-tight">Mera Kameti</span>
+            {isAdmin && <span className="bg-yellow-400 text-yellow-900 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">ADMIN</span>}
+          </Link>
 
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1">
             {links.map(link => (
               <Link
                 key={link.to}
                 to={link.to}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   location.pathname === link.to
-                    ? 'bg-primary-800 text-white'
+                    ? 'bg-primary-800 text-white shadow-inner'
                     : 'text-green-100 hover:bg-primary-700'
                 }`}
               >
@@ -56,25 +58,25 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-sm text-green-100 hidden md:block">👤 {user?.name}</span>
+            <span className="text-sm text-green-100 hidden sm:block">👤 {user?.name}</span>
             <button
               onClick={handleLogout}
-              className="bg-primary-800 hover:bg-primary-900 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
+              className="bg-primary-800 hover:bg-primary-900 text-white text-xs sm:text-sm px-3 py-1.5 rounded-lg transition-colors font-medium shadow-sm"
             >
               Logout
             </button>
           </div>
         </div>
 
-        {/* Mobile nav */}
-        <div className="md:hidden flex gap-1 pb-2 overflow-x-auto">
+        {/* Mobile horizontal scrolling nav */}
+        <div className="lg:hidden flex gap-1 pb-2.5 overflow-x-auto scrollbar-none">
           {links.map(link => (
             <Link
               key={link.to}
               to={link.to}
               className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 location.pathname === link.to
-                  ? 'bg-primary-800 text-white'
+                  ? 'bg-primary-800 text-white font-bold'
                   : 'text-green-100 hover:bg-primary-700'
               }`}
             >
