@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
+const { authMiddleware } = require('../middleware/auth');
 
 // Register
 router.post('/register', (req, res) => {
@@ -56,17 +57,65 @@ router.post('/login', (req, res) => {
 });
 
 // Get current user
-router.get('/me', (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'Token nahi mila.' });
-  try {
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, (process.env.JWT_SECRET || 'mera_kameti_fallback_secret_2024'));
-    const user = db.prepare('SELECT id, name, phone, email, role, status, created_at FROM users WHERE id = ?').get(decoded.id);
-    res.json({ data: user });
-  } catch {
-    res.status(401).json({ error: 'Invalid token.' });
+router.get('/me', authMiddleware, (req, res) => {
+  const user = db.prepare('SELECT id, name, phone, email, role, status, created_at FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'User nahi mila.' });
+  res.json({ data: user });
+});
+
+// Update Profile & Login Details (Phone, Password, Name)
+router.put('/profile', authMiddleware, (req, res) => {
+  const { name, phone, current_password, new_password, email } = req.body;
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'User nahi mila.' });
+
+  // If changing phone, check uniqueness
+  if (phone && phone !== user.phone) {
+    const existing = db.prepare('SELECT id FROM users WHERE phone = ? AND id != ?').get(phone, user.id);
+    if (existing) {
+      return res.status(400).json({ error: 'Yeh phone number kisi aur ke pass registered hai.' });
+    }
   }
+
+  // If changing password, verify current password
+  let newHashed = user.password;
+  if (new_password) {
+    if (new_password.length < 6) {
+      return res.status(400).json({ error: 'Naya password kam se kam 6 characters ka hona chahiye.' });
+    }
+    if (current_password) {
+      const valid = bcrypt.compareSync(current_password, user.password);
+      if (!valid) {
+        return res.status(400).json({ error: 'Purana password galat hai.' });
+      }
+    }
+    newHashed = bcrypt.hashSync(new_password, 10);
+  }
+
+  const updatedName = name || user.name;
+  const updatedPhone = phone || user.phone;
+  const updatedEmail = email !== undefined ? email : user.email;
+
+  db.prepare(`
+    UPDATE users 
+    SET name = ?, phone = ?, password = ?, email = ?
+    WHERE id = ?
+  `).run(updatedName, updatedPhone, newHashed, updatedEmail, user.id);
+
+  // Generate new token with updated details
+  const token = jwt.sign(
+    { id: user.id, name: updatedName, phone: updatedPhone, role: user.role },
+    (process.env.JWT_SECRET || 'mera_kameti_fallback_secret_2024'),
+    { expiresIn: '7d' }
+  );
+
+  res.json({
+    message: 'Profile aur Login details successfully update ho gayi! ✅',
+    token,
+    role: user.role,
+    name: updatedName,
+    phone: updatedPhone
+  });
 });
 
 module.exports = router;
