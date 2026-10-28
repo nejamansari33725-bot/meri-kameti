@@ -166,6 +166,21 @@ export default function Approvals() {
               />
             </div>
 
+            {noteModal.action === 'approve' && (
+              <button
+                type="button"
+                onClick={() => {
+                  const fineVal = parseFloat(lateFine || 0)
+                  const fineMsg = fineVal > 0 ? `\n⚡ लेट फाइन: ₹${fineVal}` : ''
+                  const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${noteModal.member_name}*\n💵 जमा राशि: ₹${noteModal.amount}${fineMsg}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+                  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
+                }}
+                className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+              >
+                <span>💬</span> व्हाट्सएप ग्रुप में रसीद शेयर करें
+              </button>
+            )}
+
             <div className="flex gap-3 pt-2">
               <button 
                 onClick={handleAction} 

@@ -65,6 +65,26 @@ export default function AdminDashboard() {
 
   const now = new Date()
 
+  const broadcastMonthlyReport = () => {
+    if (!summary) return
+    const msg = `📊 *MERA KAMETI — चालू माह स्थिति (${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()})* 📊\n━━━━━━━━━━━━━━━━━━━━\n🟢 कुल जमा किश्तें: ₹${summary.overallTotalCredit?.toLocaleString('en-IN') || 0}\n🔴 कुल उठाया गया: ₹${summary.overallTotalDebit?.toLocaleString('en-IN') || 0}\n👥 इस माह किश्त जमा सदस्य: ${summary.paidMembers}/${summary.totalMembers}\n🏆 इस माह का विनर: ${summary.winner ? summary.winner.winner_name : 'तय नहीं'}\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल पर देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  const broadcastWinner = () => {
+    if (!summary?.winner) {
+      toast('इस महीने का कोई विनर अभी सेट नहीं है। विनर पेज पर जाकर सेट करें।', { icon: 'ℹ️' })
+      return
+    }
+    const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${summary.winner.winner_name}* ने ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${(summary.winner.payout_amount || summary.winner.total_collected)?.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  const broadcastInvite = () => {
+    const msg = `🤝 *MERA KAMETI (मेरा कमिटी) में आपका स्वागत है!* 🤝\n━━━━━━━━━━━━━━━━━━━━\nसभी कमिटी सदस्यों से अनुरोध है कि अपनी किश्त समय पर जमा करें और लाइव खाता बही पोर्टल पर देखें:\n\n🌐 पोर्टल लिंक: https://mera-kameti-app-production.up.railway.app\n💬 आधिकारिक व्हाट्सएप ग्रुप: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2\n━━━━━━━━━━━━━━━━━━━━\n- कमिटी प्रबंधन`
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Modern Hero Banner */}
@@ -84,7 +104,15 @@ export default function AdminDashboard() {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-lg flex items-center gap-2 shrink-0"
+            >
+              <span>💬</span> व्हाट्सएप ग्रुप
+            </a>
             <Link
               to="/admin/ledger"
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2"
@@ -92,6 +120,71 @@ export default function AdminDashboard() {
               <span>📖</span> पूरा खाता बही खोलें
             </Link>
           </div>
+        </div>
+      </div>
+
+      {/* WhatsApp Live Group Broadcast Center */}
+      <div className="card bg-gradient-to-br from-emerald-50 via-teal-50 to-white border border-emerald-200 shadow-md space-y-3">
+        <div className="flex flex-wrap justify-between items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-[#25D366] text-white flex items-center justify-center text-xl shrink-0 shadow-md shadow-green-500/20">
+              💬
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm sm:text-base">
+                व्हाट्सएप ग्रुप लाइव ब्रॉडकास्ट (Share to WhatsApp Group)
+              </h3>
+              <p className="text-xs text-slate-500">
+                एक क्लिक में कमिटी की ताज़ा स्थिति और घोषणाएं आधिकारिक व्हाट्सएप ग्रुप में भेजें
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs bg-[#25D366] hover:bg-[#20ba59] text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all"
+          >
+            <span>💬</span> ग्रुप लिंक खोलें
+          </a>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-emerald-100">
+          <button
+            onClick={broadcastMonthlyReport}
+            className="p-3 bg-white hover:bg-emerald-50 rounded-xl border border-emerald-200 text-left transition-all shadow-sm flex items-center justify-between group"
+          >
+            <div>
+              <span className="font-bold text-xs text-slate-800 block">📊 चालू माह रिपोर्ट भेजें</span>
+              <span className="text-[11px] text-slate-500">कुल जमा, किश्तें व विनर स्थिति</span>
+            </div>
+            <span className="text-emerald-600 font-bold text-sm group-hover:translate-x-1 transition-transform">→</span>
+          </button>
+
+          <button
+            onClick={broadcastWinner}
+            className="p-3 bg-white hover:bg-amber-50 rounded-xl border border-amber-200 text-left transition-all shadow-sm flex items-center justify-between group"
+          >
+            <div>
+              <span className="font-bold text-xs text-slate-800 block">🏆 विनर घोषणा भेजें</span>
+              <span className="text-[11px] text-slate-500">
+                {summary?.winner ? summary.winner.winner_name : 'इस माह का विनर'}
+              </span>
+            </div>
+            <span className="text-amber-600 font-bold text-sm group-hover:translate-x-1 transition-transform">→</span>
+          </button>
+
+          <button
+            onClick={broadcastInvite}
+            className="p-3 bg-white hover:bg-blue-50 rounded-xl border border-blue-200 text-left transition-all shadow-sm flex items-center justify-between group"
+          >
+            <div>
+              <span className="font-bold text-xs text-slate-800 block">📲 पोर्टल व ग्रुप लिंक शेयर करें</span>
+              <span className="text-[11px] text-slate-500">मेम्बर्स को लॉग इन करने का आमंत्रण</span>
+            </div>
+            <span className="text-blue-600 font-bold text-sm group-hover:translate-x-1 transition-transform">→</span>
+          </button>
         </div>
       </div>
 

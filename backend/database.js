@@ -72,11 +72,22 @@ const defaultSettings = [
   ['upi_id', 'ansarinizam57970-2@oksbi'],
   ['upi_name', 'Nizam Ansari'],
   ['qr_code_url', '/upi-qr.png'],
-  ['default_late_fine', '0']
+  ['default_late_fine', '0'],
+  ['whatsapp_group_link', 'https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2']
 ];
 
 const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 defaultSettings.forEach(([k, v]) => insertSetting.run(k, v));
+
+// Also ensure whatsapp_group_link is set to the provided group link
+try {
+  const existingGroup = db.prepare("SELECT value FROM settings WHERE key = 'whatsapp_group_link'").get();
+  if (!existingGroup || !existingGroup.value) {
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('whatsapp_group_link', ?)").run(
+      'https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2'
+    );
+  }
+} catch (e) {}
 
 // Seed admin user if not exists
 const adminExists = db.prepare("SELECT id FROM users WHERE phone = '0000000000'").get();

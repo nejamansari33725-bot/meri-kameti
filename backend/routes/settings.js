@@ -36,7 +36,7 @@ router.get('/', (req, res) => {
 
 // Update settings (Admin only)
 router.put('/', authMiddleware, adminOnly, upload.single('qr_image'), (req, res) => {
-  const { committee_name, upi_id, upi_name, default_late_fine } = req.body;
+  const { committee_name, upi_id, upi_name, default_late_fine, whatsapp_group_link } = req.body;
   
   const upsert = db.prepare(`
     INSERT INTO settings (key, value) VALUES (?, ?)
@@ -47,6 +47,7 @@ router.put('/', authMiddleware, adminOnly, upload.single('qr_image'), (req, res)
   if (upi_id !== undefined) upsert.run('upi_id', upi_id);
   if (upi_name !== undefined) upsert.run('upi_name', upi_name);
   if (default_late_fine !== undefined) upsert.run('default_late_fine', default_late_fine);
+  if (whatsapp_group_link !== undefined) upsert.run('whatsapp_group_link', whatsapp_group_link);
 
   if (req.file) {
     const qrUrl = `/uploads/${req.file.filename}`;

@@ -13,7 +13,8 @@ export default function AdminSettings() {
     upi_id: 'ansarinizam57970-2@oksbi',
     upi_name: 'Nizam Ansari',
     qr_code_url: '/upi-qr.png',
-    default_late_fine: '0'
+    default_late_fine: '0',
+    whatsapp_group_link: 'https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2'
   })
   const [qrFile, setQrFile] = useState(null)
   const [qrPreview, setQrPreview] = useState(null)
@@ -66,6 +67,7 @@ export default function AdminSettings() {
       formData.append('upi_id', settings.upi_id)
       formData.append('upi_name', settings.upi_name)
       formData.append('default_late_fine', settings.default_late_fine)
+      formData.append('whatsapp_group_link', settings.whatsapp_group_link || '')
       if (qrFile) {
         formData.append('qr_image', qrFile)
       }
@@ -227,6 +229,36 @@ export default function AdminSettings() {
                   required
                 />
               </div>
+            </div>
+
+            {/* Official WhatsApp Group Link */}
+            <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-2">
+              <label className="block text-sm font-bold text-emerald-900 flex items-center gap-2">
+                <span>💬</span> कमिटी का आधिकारिक व्हाट्सएप ग्रुप लिंक (Official WhatsApp Group Link)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  className="input font-mono text-sm bg-white"
+                  placeholder="https://chat.whatsapp.com/..."
+                  value={settings.whatsapp_group_link || ''}
+                  onChange={e => setSettings({ ...settings, whatsapp_group_link: e.target.value })}
+                  required
+                />
+                {settings.whatsapp_group_link && (
+                  <a
+                    href={settings.whatsapp_group_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-[#25D366] hover:bg-[#20ba59] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0"
+                  >
+                    <span>↗️</span> टेस्ट करें
+                  </a>
+                )}
+              </div>
+              <p className="text-xs text-emerald-700">
+                वेबसाइट पर सभी मेम्बर्स को यह लिंक दिखाई देगा ताकि वे सीधे व्हाट्सएप ग्रुप में जुड़ सकें।
+              </p>
             </div>
 
             {/* QR Code Upload Section */}

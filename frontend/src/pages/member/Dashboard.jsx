@@ -44,6 +44,34 @@ export default function MemberDashboard() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
       
+      {/* Official WhatsApp Group Invite Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-[#25D366] p-5 sm:p-6 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-emerald-400/30">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shrink-0 shadow-inner">
+            💬
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-1.5 bg-white/20 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest mb-1">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+              OFFICIAL WHATSAPP GROUP
+            </div>
+            <h3 className="font-black text-base sm:text-xl tracking-tight">कमिटी व्हाट्सएप ग्रुप से जुड़ें</h3>
+            <p className="text-xs text-emerald-100 mt-0.5">
+              सभी किश्तों, विनर घोषणा और कमिटी सूचनाओं के लिए ग्रुप में जुड़े रहें
+            </p>
+          </div>
+        </div>
+
+        <a
+          href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-white text-emerald-900 hover:bg-emerald-50 px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all shadow-lg flex items-center gap-2 shrink-0 transform hover:scale-105"
+        >
+          <span>📲</span> ग्रुप में शामिल हों (Join Group) →
+        </a>
+      </div>
+
       {/* Top Welcome & Digital Membership Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         

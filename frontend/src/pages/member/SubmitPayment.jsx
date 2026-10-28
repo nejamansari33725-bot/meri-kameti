@@ -432,11 +432,22 @@ export default function SubmitPayment() {
         </div>
 
         {/* Instructions */}
-        <div className="text-xs text-slate-600 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 space-y-1">
+        <div className="text-xs text-slate-600 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 space-y-2">
           <p className="font-bold text-emerald-900 mb-1">📌 पेमेंट करने का तरीका:</p>
           <p>1. ऊपर दिया गया QR कोड स्कैन करें या UPI ID पर पेमेंट करें।</p>
           <p>2. पेमेंट सफल होने के बाद उसका <strong>Screenshot</strong> लें।</p>
           <p>3. ऊपर वाले फॉर्म में किश्त व लेट फाइन दर्ज करें, स्क्रीनशॉट अपलोड कर <strong>"पेमेंट सबमिट करें"</strong> दबाएं।</p>
+          
+          <div className="pt-1 border-t border-emerald-200/60">
+            <a
+              href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-sm"
+            >
+              <span>💬</span> आधिकारिक कमिटी व्हाट्सएप ग्रुप से जुड़ें
+            </a>
+          </div>
         </div>
       </div>
 

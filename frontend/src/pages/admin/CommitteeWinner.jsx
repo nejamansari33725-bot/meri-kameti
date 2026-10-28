@@ -100,18 +100,31 @@ export default function CommitteeWinner() {
 
       {/* Current winner */}
       {currentRound?.winner_name && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 flex items-center gap-4 shadow-sm">
-          <span className="text-5xl">🏆</span>
-          <div>
-            <p className="font-extrabold text-yellow-900 text-xl">{currentRound.winner_name}</p>
-            <p className="text-yellow-700 text-sm mt-0.5">
-              {MONTH_NAMES[month]} {year} के विनर — इन्होंने 
-              <span className="font-bold text-red-700 mx-1">
-                ₹ {(currentRound.payout_amount || currentRound.total_collected)?.toLocaleString('en-IN')}
-              </span> 
-              कमेटी उठाई है (Debit दर्ज हो गया)।
-            </p>
+        <div className="bg-yellow-50 border border-yellow-300 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+          <div className="flex items-center gap-4">
+            <span className="text-5xl">🏆</span>
+            <div>
+              <p className="font-black text-yellow-950 text-xl">{currentRound.winner_name}</p>
+              <p className="text-yellow-800 text-sm mt-0.5">
+                {MONTH_NAMES[month]} {year} के विनर — इन्होंने 
+                <span className="font-extrabold text-red-700 mx-1">
+                  ₹ {(currentRound.payout_amount || currentRound.total_collected)?.toLocaleString('en-IN')}
+                </span> 
+                कमेटी उठाई है (Debit दर्ज हो गया)।
+              </p>
+            </div>
           </div>
+
+          <button
+            onClick={() => {
+              const amt = (currentRound.payout_amount || currentRound.total_collected)?.toLocaleString('en-IN')
+              const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${currentRound.winner_name}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amt}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+              window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
+            }}
+            className="bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 shrink-0 transition-all"
+          >
+            <span>💬</span> ग्रुप में विनर शेयर करें
+          </button>
         </div>
       )}
 
