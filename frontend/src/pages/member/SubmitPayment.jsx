@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 
@@ -16,10 +16,28 @@ export default function SubmitPayment() {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const upiId = 'ansarinizam57970-2@oksbi'
+  // Dynamic payment settings from Admin
+  const [paymentConfig, setPaymentConfig] = useState({
+    upi_id: 'ansarinizam57970-2@oksbi',
+    upi_name: 'Nizam Ansari',
+    qr_code_url: '/upi-qr.png'
+  })
+
+  useEffect(() => {
+    api.get('/settings').then(res => {
+      if (res.data?.data) {
+        setPaymentConfig(prev => ({
+          ...prev,
+          upi_id: res.data.data.upi_id || prev.upi_id,
+          upi_name: res.data.data.upi_name || prev.upi_name,
+          qr_code_url: res.data.data.qr_code_url || prev.qr_code_url
+        }))
+      }
+    }).catch(err => console.error(err))
+  }, [])
 
   const copyUpi = () => {
-    navigator.clipboard.writeText(upiId)
+    navigator.clipboard.writeText(paymentConfig.upi_id)
     setCopied(true)
     toast.success('UPI ID कॉपी हो गई! ✅')
     setTimeout(() => setCopied(false), 2500)
@@ -47,11 +65,11 @@ export default function SubmitPayment() {
       formData.append('year', form.year)
       if (screenshot) formData.append('screenshot', screenshot)
 
-      await api.post('/payments', formData, {
+      const res = await api.post('/payments', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 
-      toast.success('Payment सबमिट हो गया! Admin अप्रूव करेगा। ✅')
+      toast.success(res.data.message || 'Payment सबमिट हो गया! ✅')
       setForm({ amount: '', reference_no: '', note: '', month: now.getMonth() + 1, year: now.getFullYear() })
       setScreenshot(null)
       setPreview(null)
@@ -65,7 +83,7 @@ export default function SubmitPayment() {
   const months = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December']
 
-  const upiPayLink = `upi://pay?pa=${upiId}&pn=Nizam%20Ansari&cu=INR${form.amount ? `&am=${form.amount}` : ''}`
+  const upiPayLink = `upi://pay?pa=${paymentConfig.upi_id}&pn=${encodeURIComponent(paymentConfig.upi_name)}&cu=INR${form.amount ? `&am=${form.amount}` : ''}`
 
   return (
     <div className="max-w-xl mx-auto p-4 space-y-6">
@@ -182,7 +200,7 @@ export default function SubmitPayment() {
             कमेटी का पैसा इस QR या UPI पर भेजें
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Google Pay, PhonePe, Paytm या किसी भी UPI ऐप से स्कैन करें
+            खाता धारक: <span className="font-semibold text-gray-800">{paymentConfig.upi_name}</span>
           </p>
         </div>
 
@@ -190,8 +208,8 @@ export default function SubmitPayment() {
         <div className="flex justify-center">
           <div className="bg-white p-3 rounded-2xl shadow-md border border-emerald-100 max-w-[280px] w-full text-center">
             <img
-              src="/upi-qr.png"
-              alt="Nizam Ansari UPI QR Code"
+              src={paymentConfig.qr_code_url || '/upi-qr.png'}
+              alt="UPI QR Code"
               className="w-full h-auto rounded-xl mx-auto object-contain"
             />
           </div>
@@ -205,7 +223,7 @@ export default function SubmitPayment() {
           
           <div className="flex items-center justify-between gap-2 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-200">
             <span className="font-mono font-bold text-sm text-emerald-950 truncate select-all">
-              {upiId}
+              {paymentConfig.upi_id}
             </span>
             <button
               type="button"
