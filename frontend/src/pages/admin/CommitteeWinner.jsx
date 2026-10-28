@@ -61,7 +61,7 @@ export default function CommitteeWinner() {
 
       // Automatically dispatch winner announcement to WhatsApp group
       const amtStr = finalPayout ? finalPayout.toLocaleString('en-IN') : 'कमिटी राशि'
-      const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${memberName}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amtStr}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${memberName}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amtStr}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error.')
@@ -130,7 +130,7 @@ export default function CommitteeWinner() {
           <button
             onClick={() => {
               const amt = (currentRound.payout_amount || currentRound.total_collected)?.toLocaleString('en-IN')
-              const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${currentRound.winner_name}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amt}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+              const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${currentRound.winner_name}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amt}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
               window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
             }}
             className="bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 shrink-0 transition-all"

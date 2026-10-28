@@ -49,7 +49,7 @@ export default function AdminDashboard() {
       toast.success(`${name} का अकाउंट अप्रूव हो गया! ✅`)
       loadAllData()
 
-      const msg = `🎉 *MERA KAMETI — नया सदस्य जुड़ा!* 🎉\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${name}*\nस्टेटस: ✅ अप्रूव हो चुके हैं!\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      const msg = `🎉 *MERA KAMETI — नया सदस्य जुड़ा!* 🎉\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${name}*\nस्टेटस: ✅ अप्रूव हो चुके हैं!\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
     } catch (err) {
       toast.error(err.response?.data?.error || 'अप्रूव नहीं हो पाया।')
@@ -90,7 +90,7 @@ export default function AdminDashboard() {
       const fineMsg = fineVal > 0 ? `\n⚡ लेट फाइन: ₹${fineVal}` : ''
       const repMsg = repVal > 0 ? `\n🔄 उठाया पैसा वापसी: ₹${repVal}` : ''
       const total = (parseFloat(p.amount) || 0) + fineVal + repVal
-      const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${p.member_name}*\n💵 किश्त जमा: ₹${p.amount}${repMsg}${fineMsg}\n💰 कुल भुगतान: ₹${total}\n📅 महीना: ${MONTH_NAMES[p.month]} ${p.year}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${p.member_name}*\n💵 किश्त जमा: ₹${p.amount}${repMsg}${fineMsg}\n💰 कुल भुगतान: ₹${total}\n📅 महीना: ${MONTH_NAMES[p.month]} ${p.year}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
 
       setPaymentActionModal(null)
@@ -129,7 +129,7 @@ export default function AdminDashboard() {
 
   const broadcastMonthlyReport = () => {
     if (!summary) return
-    const msg = `📊 *MERA KAMETI — चालू माह स्थिति (${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()})* 📊\n━━━━━━━━━━━━━━━━━━━━\n🟢 कुल जमा किश्तें: ₹${summary.overallTotalCredit?.toLocaleString('en-IN') || 0}\n🔴 कुल उठाया गया: ₹${summary.overallTotalDebit?.toLocaleString('en-IN') || 0}\n👥 इस माह किश्त जमा सदस्य: ${summary.paidMembers}/${summary.totalMembers}\n🏆 इस माह का विनर: ${summary.winner ? summary.winner.winner_name : 'तय नहीं'}\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल पर देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+    const msg = `📊 *MERA KAMETI — चालू माह स्थिति (${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()})* 📊\n━━━━━━━━━━━━━━━━━━━━\n🟢 कुल जमा किश्तें: ₹${summary.overallTotalCredit?.toLocaleString('en-IN') || 0}\n🔴 कुल उठाया गया: ₹${summary.overallTotalDebit?.toLocaleString('en-IN') || 0}\n👥 इस माह किश्त जमा सदस्य: ${summary.paidMembers}/${summary.totalMembers}\n🏆 इस माह का विनर: ${summary.winner ? summary.winner.winner_name : 'तय नहीं'}\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल पर देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
@@ -138,12 +138,12 @@ export default function AdminDashboard() {
       toast('इस महीने का कोई विनर अभी सेट नहीं है। विनर पेज पर जाकर सेट करें।', { icon: 'ℹ️' })
       return
     }
-    const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${summary.winner.winner_name}* ने ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${(summary.winner.payout_amount || summary.winner.total_collected)?.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+    const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${summary.winner.winner_name}* ने ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${(summary.winner.payout_amount || summary.winner.total_collected)?.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   const broadcastInvite = () => {
-    const msg = `🤝 *MERA KAMETI (मेरा कमिटी) में आपका स्वागत है!* 🤝\n━━━━━━━━━━━━━━━━━━━━\nसभी कमिटी सदस्यों से अनुरोध है कि अपनी किश्त समय पर जमा करें और लाइव खाता बही पोर्टल पर देखें:\n\n🌐 पोर्टल लिंक: https://mera-kameti-app-production.up.railway.app\n💬 आधिकारिक व्हाट्सएप ग्रुप: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2\n━━━━━━━━━━━━━━━━━━━━\n- कमिटी प्रबंधन`
+    const msg = `🤝 *MERA KAMETI (मेरा कमिटी) में आपका स्वागत है!* 🤝\n━━━━━━━━━━━━━━━━━━━━\nसभी कमिटी सदस्यों से अनुरोध है कि अपनी किश्त समय पर जमा करें और लाइव खाता बही पोर्टल पर देखें:\n\n🌐 पोर्टल लिंक: https://merakameti.up.railway.app\n💬 आधिकारिक व्हाट्सएप ग्रुप: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2\n━━━━━━━━━━━━━━━━━━━━\n- कमिटी प्रबंधन`
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
