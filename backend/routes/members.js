@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { notifyWhatsApp } = require('../utils/whatsapp');
 
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Helper to query all participants (members and admin who is also a committee member) with full ledger details
+// Helper to query all approved participants with full ledger details
 function getMembersWithLedger() {
   return db.prepare(`
     SELECT 
@@ -45,6 +46,7 @@ function getMembersWithLedger() {
       WHERE winner_user_id IS NOT NULL
       GROUP BY winner_user_id
     ) r ON u.id = r.winner_user_id
+    WHERE u.status IN ('active', 'inactive')
     ORDER BY (CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END), u.name ASC
   `).all();
 }
@@ -53,6 +55,42 @@ function getMembersWithLedger() {
 router.get('/', authMiddleware, (req, res) => {
   const members = getMembersWithLedger();
   res.json({ data: members });
+});
+
+// Get pending member registrations waiting for Admin approval
+router.get('/pending-registrations', authMiddleware, adminOnly, (req, res) => {
+  const pending = db.prepare(`
+    SELECT id, name, phone, email, status, created_at
+    FROM users
+    WHERE role = 'member' AND status = 'pending'
+    ORDER BY created_at DESC
+  `).all();
+  res.json({ data: pending });
+});
+
+// Approve member registration (Admin only)
+router.put('/:id/approve-registration', authMiddleware, adminOnly, (req, res) => {
+  const user = db.prepare("SELECT id, name, phone, status FROM users WHERE id = ?").get(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User nahi mila.' });
+
+  db.prepare("UPDATE users SET status = 'active' WHERE id = ?").run(req.params.id);
+
+  // Notify member via WhatsApp placeholder
+  notifyWhatsApp(user.phone, `🎉 Mubarak ho ${user.name}!\nAapka Mera Kameti account Admin dwara approve kar diya gaya hai. Ab aap login kar sakte hain!\n- Mera Kameti`);
+
+  res.json({ message: `${user.name} ka account approve ho gaya! Ab yeh login kar sakte hain. ✅` });
+});
+
+// Reject member registration (Admin only)
+router.put('/:id/reject-registration', authMiddleware, adminOnly, (req, res) => {
+  const user = db.prepare("SELECT id, name, phone, status FROM users WHERE id = ?").get(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User nahi mila.' });
+
+  db.prepare("UPDATE users SET status = 'rejected' WHERE id = ?").run(req.params.id);
+
+  notifyWhatsApp(user.phone, `Aapka Mera Kameti registration request Admin dwara reject kar diya gaya hai.`);
+
+  res.json({ message: `${user.name} ka registration request reject kar diya gaya.` });
 });
 
 // Dedicated Khata / Ledger summary of all members (Overall Total Credit, Debit, Late Fine)

@@ -28,11 +28,17 @@ router.get('/summary', authMiddleware, (req, res) => {
     WHERE month = ? AND year = ? AND status = 'approved'
   `).get(month, year);
 
-  // This month pending
+  // This month pending payments
   const pendingCount = db.prepare(`
     SELECT COUNT(*) as count FROM payments
     WHERE month = ? AND year = ? AND status = 'pending'
   `).get(month, year);
+
+  // Pending Member registrations waiting for approval
+  const pendingMembers = db.prepare(`
+    SELECT COUNT(*) as count FROM users
+    WHERE role = 'member' AND status = 'pending'
+  `).get();
 
   // This month winner
   const winner = db.prepare(`
@@ -42,7 +48,7 @@ router.get('/summary', authMiddleware, (req, res) => {
     WHERE r.month = ? AND r.year = ?
   `).get(month, year);
 
-  const totalMembers = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'member' AND status = 'active'").get();
+  const totalMembers = db.prepare("SELECT COUNT(*) as count FROM users WHERE status = 'active'").get();
   const paidMembers = db.prepare(`
     SELECT COUNT(DISTINCT user_id) as count FROM payments
     WHERE month = ? AND year = ? AND status = 'approved'
@@ -51,6 +57,11 @@ router.get('/summary', authMiddleware, (req, res) => {
   // Lifetime Overall Credit (All approved payments)
   const allCredit = db.prepare(`
     SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'approved'
+  `).get();
+
+  // Lifetime Overall Late Fine
+  const allLateFine = db.prepare(`
+    SELECT COALESCE(SUM(COALESCE(late_fine, 0)), 0) as total FROM payments WHERE status = 'approved'
   `).get();
 
   // Lifetime Overall Debit (All payouts to winners)
@@ -65,12 +76,14 @@ router.get('/summary', authMiddleware, (req, res) => {
       month, year,
       totalCollected: totalCollected.total,
       pendingCount: pendingCount.count,
+      pendingMembersCount: pendingMembers.count,
       winner: winner || null,
       totalMembers: totalMembers.count,
       paidMembers: paidMembers.count,
       overallTotalCredit: allCredit.total,
+      overallTotalLateFine: allLateFine.total,
       overallTotalDebit: allDebit.total,
-      overallNetBalance: allCredit.total - allDebit.total
+      overallNetBalance: (allCredit.total + allLateFine.total) - allDebit.total
     }
   });
 });
@@ -129,7 +142,7 @@ router.get('/members-status', authMiddleware, adminOnly, (req, res) => {
       (SELECT COUNT(id) FROM committee_rounds WHERE winner_user_id = u.id) as previous_wins
     FROM users u
     LEFT JOIN payments p ON u.id = p.user_id AND p.month = ? AND p.year = ? AND p.status = 'approved'
-    WHERE u.role = 'member' AND u.status = 'active'
+    WHERE u.status = 'active'
     ORDER BY u.name
   `).all(parseInt(month), parseInt(year));
 

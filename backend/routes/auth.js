@@ -4,8 +4,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
 const { authMiddleware } = require('../middleware/auth');
+const { notifyWhatsApp } = require('../utils/whatsapp');
 
-// Register
+// Register - New members require Admin approval
 router.post('/register', (req, res) => {
   const { name, phone, password, email } = req.body;
   if (!name || !phone || !password) {
@@ -14,21 +15,31 @@ router.post('/register', (req, res) => {
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password kam se kam 6 characters ka hona chahiye.' });
   }
-  const existing = db.prepare('SELECT id FROM users WHERE phone = ?').get(phone);
+
+  const existing = db.prepare('SELECT id, status FROM users WHERE phone = ?').get(phone);
   if (existing) {
+    if (existing.status === 'pending') {
+      return res.status(400).json({ error: 'Yeh phone number pehle se registered hai aur Admin approval ke liye pending hai.' });
+    }
     return res.status(400).json({ error: 'Yeh phone number pehle se registered hai.' });
   }
+
   const hashed = bcrypt.hashSync(password, 10);
   const result = db.prepare(
-    'INSERT INTO users (name, phone, email, password) VALUES (?, ?, ?, ?)'
-  ).run(name, phone, email || null, hashed);
+    'INSERT INTO users (name, phone, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(name, phone, email || null, hashed, 'member', 'pending');
 
-  const token = jwt.sign(
-    { id: result.lastInsertRowid, name, phone, role: 'member' },
-    (process.env.JWT_SECRET || 'mera_kameti_fallback_secret_2024'),
-    { expiresIn: '7d' }
-  );
-  res.json({ message: 'Registration successful!', token, role: 'member', name });
+  // Notify Admin via WhatsApp that a new member registered
+  const admin = db.prepare("SELECT phone FROM users WHERE role = 'admin' LIMIT 1").get();
+  if (admin) {
+    notifyWhatsApp(admin.phone, `👤 Naya Member Registration Request!\nName: ${name}\nPhone: ${phone}\nKripya Admin Panel me jakar approve karein.`);
+  }
+
+  res.json({
+    message: 'Registration safal! Aapka account Admin ke approval ke liye bhej diya gaya hai. Admin approve karega tab aap login kar sakenge.',
+    pendingApproval: true,
+    name
+  });
 });
 
 // Login
@@ -41,18 +52,33 @@ router.post('/login', (req, res) => {
   if (!user) {
     return res.status(400).json({ error: 'Phone number registered nahi hai.' });
   }
-  if (user.status === 'inactive') {
-    return res.status(403).json({ error: 'Aapka account deactivate hai. Admin se contact karein.' });
+  if (user.status === 'pending') {
+    return res.status(403).json({ 
+      error: 'Aapka account Admin approval ke liye pending hai. Admin dwara approve kiye jaane ke baad hi aap login kar sakenge.' 
+    });
   }
+  if (user.status === 'rejected') {
+    return res.status(403).json({ 
+      error: 'Aapka account Admin dwara reject kar diya gaya hai. Kripya Admin se sampark karein.' 
+    });
+  }
+  if (user.status === 'inactive') {
+    return res.status(403).json({ 
+      error: 'Aapka account deactivate hai. Admin se sampark karein.' 
+    });
+  }
+
   const valid = bcrypt.compareSync(password, user.password);
   if (!valid) {
     return res.status(400).json({ error: 'Password galat hai.' });
   }
+
   const token = jwt.sign(
     { id: user.id, name: user.name, phone: user.phone, role: user.role },
     (process.env.JWT_SECRET || 'mera_kameti_fallback_secret_2024'),
     { expiresIn: '7d' }
   );
+
   res.json({ message: 'Login successful!', token, role: user.role, name: user.name });
 });
 

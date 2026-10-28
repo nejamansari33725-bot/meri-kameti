@@ -34,7 +34,7 @@ export default function MemberDashboard() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-600 border-t-transparent"></div>
     </div>
   )
 
@@ -42,138 +42,273 @@ export default function MemberDashboard() {
   const thisMonthPayment = recentPayments.find(p => p.month === now.getMonth() + 1 && p.year === now.getFullYear())
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-6 text-white shadow-md">
-        <div className="flex flex-wrap justify-between items-center gap-3">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
+      
+      {/* Top Welcome & Digital Membership Card */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        
+        {/* Welcome & Quick Navigation */}
+        <div className="lg:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-6 sm:p-7 text-white shadow-xl border border-slate-700/50 flex flex-col justify-between">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-56 h-56 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
           <div>
-            <h1 className="text-2xl font-bold">Assalam o Alaikum, {user?.name}! 👋</h1>
-            <p className="text-green-100 mt-1">{MONTH_NAMES[now.getMonth() + 1]} {now.getFullYear()} — Mera Kameti Status</p>
+            <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-400/25 px-3 py-1 rounded-full text-xs font-bold text-emerald-300 mb-3">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              सदस्य पोर्टल (Member Portal)
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              खुशामदीद, {user?.name || 'सदस्य'}! 👋
+            </h1>
+            <p className="text-slate-300 text-sm mt-1">
+              {MONTH_NAMES[now.getMonth() + 1]} {now.getFullYear()} — आपकी कमिटी का लाइव विवरण
+            </p>
           </div>
-          <Link
-            to="/ledger"
-            className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-semibold backdrop-blur transition-all flex items-center gap-1.5"
-          >
-            <span>📖</span> पूरा खाता बही देखें →
-          </Link>
-        </div>
-      </div>
 
-      {/* Member's Personal Credit & Debit Card */}
-      {myStatement && (
-        <div className="card bg-gradient-to-br from-emerald-50/70 via-white to-blue-50/70 border-emerald-200">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="font-bold text-gray-800 flex items-center gap-2">
-              <span>💳</span> आपका व्यक्तिगत खाता (Personal Khata)
-            </h2>
-            <Link to="/history" className="text-primary-700 text-xs font-semibold hover:underline">
-              पूरी हिस्ट्री देखें →
+          <div className="pt-6 flex flex-wrap gap-2.5">
+            <Link
+              to="/pay"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2"
+            >
+              <span>💳</span> किश्त जमा करें (Pay Now)
+            </Link>
+            <Link
+              to="/ledger"
+              className="bg-slate-700/80 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-600"
+            >
+              <span>📖</span> सबका खाता बही
+            </Link>
+            <Link
+              to="/history"
+              className="bg-slate-700/80 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-600"
+            >
+              <span>📜</span> मेरी पेमेंट्स
             </Link>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 bg-green-50 rounded-xl border border-green-200 text-center">
-              <span className="text-[11px] text-green-700 font-bold uppercase block">आपने जमा किया (Credit)</span>
-              <span className="text-xl font-extrabold text-green-700 mt-1 block">
+        </div>
+
+        {/* Digital Member Card */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-emerald-800 via-teal-700 to-emerald-600 p-6 text-white shadow-xl border border-emerald-500/30 flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-emerald-200 font-bold">Mera Kameti Card</p>
+              <p className="text-base font-extrabold tracking-wide mt-0.5">मेरा कमिटी पासबुक</p>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white font-bold text-xs tracking-wider backdrop-blur-sm">
+              ACTIVE
+            </span>
+          </div>
+
+          {/* Chip and Details */}
+          <div className="my-4">
+            <div className="w-10 h-7 rounded-md bg-amber-300/80 border border-amber-200 shadow-inner flex items-center justify-center">
+              <div className="w-8 h-4 border border-amber-500/50 rounded-sm grid grid-cols-2"></div>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-emerald-100 font-medium tracking-wider">MEMBER NAME</p>
+            <p className="text-lg font-bold uppercase tracking-wider truncate">{user?.name || 'MEMBER'}</p>
+            <div className="flex justify-between items-center text-xs text-emerald-200 mt-2 pt-2 border-t border-emerald-500/40">
+              <span>📱 {user?.phone}</span>
+              <span>ID: #{user?.id || '---'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Member's Personal Credit & Debit Overview */}
+      {myStatement && (
+        <div className="card border border-emerald-100/70 shadow-lg bg-gradient-to-br from-white via-emerald-50/20 to-teal-50/20">
+          <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                <span>💳</span> आपका व्यक्तिगत कमिटी खाता (Your Personal Khata)
+              </h2>
+              <p className="text-xs text-slate-500">आपके द्वारा अब तक जमा की गई और उठाई गई कुल रकम</p>
+            </div>
+            <Link to="/history" className="text-emerald-700 text-xs font-bold hover:underline bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+              पूरी रसीद हिस्ट्री देखें →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            {/* Credit Card */}
+            <div className="p-4 bg-gradient-to-br from-emerald-500/10 via-emerald-50 to-teal-50 rounded-2xl border border-emerald-200 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">आपने जमा किया (Credit)</span>
+                <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">↑</span>
+              </div>
+              <p className="text-2xl font-black text-emerald-700 mt-2">
                 ₹ {myStatement.total_credit?.toLocaleString('en-IN') || 0}
-              </span>
+              </p>
+              <p className="text-[11px] text-emerald-600 mt-1 font-medium">कुल स्वीकृत किश्तें</p>
             </div>
-            <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-center">
-              <span className="text-[11px] text-red-700 font-bold uppercase block">आपने उठाया (Debit)</span>
-              <span className="text-xl font-extrabold text-red-700 mt-1 block">
+
+            {/* Debit Card */}
+            <div className="p-4 bg-gradient-to-br from-rose-500/10 via-rose-50 to-orange-50 rounded-2xl border border-rose-200 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-rose-800 uppercase tracking-wider">आपने उठाया (Debit)</span>
+                <span className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm">↓</span>
+              </div>
+              <p className="text-2xl font-black text-rose-600 mt-2">
                 ₹ {myStatement.total_debit?.toLocaleString('en-IN') || 0}
-              </span>
+              </p>
+              <p className="text-[11px] text-rose-600 mt-1 font-medium">कमिटी से मिला पेआउट</p>
             </div>
-            <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200 text-center">
-              <span className="text-[11px] text-indigo-700 font-bold uppercase block">आपका बैलेंस (Net)</span>
-              <span className={`text-xl font-extrabold mt-1 block ${
-                myStatement.net_balance >= 0 ? 'text-indigo-700' : 'text-red-700'
+
+            {/* Net Balance Card */}
+            <div className="p-4 bg-gradient-to-br from-indigo-500/10 via-indigo-50 to-blue-50 rounded-2xl border border-indigo-200 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-indigo-800 uppercase tracking-wider">नेट स्थिति (Net Balance)</span>
+                <span className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">⚖️</span>
+              </div>
+              <p className={`text-2xl font-black mt-2 ${
+                myStatement.net_balance >= 0 ? 'text-indigo-700' : 'text-rose-700'
               }`}>
                 ₹ {myStatement.net_balance?.toLocaleString('en-IN') || 0}
-              </span>
+              </p>
+              <p className="text-[11px] text-indigo-600 mt-1 font-medium">
+                {myStatement.net_balance >= 0 ? 'आप कमिटी में जमाकर्ता हैं' : 'आपने कमिटी उठा ली है'}
+              </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* This month payment status */}
-      <div className="card">
-        <h2 className="font-semibold text-gray-700 mb-3">📅 इस महीने का पेमेंट स्टेटस</h2>
+      {/* This Month's Payment Status */}
+      <div className="card shadow-lg border border-slate-100">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="font-bold text-slate-800 flex items-center gap-2">
+            <span>📅</span> चालू माह भुगतान स्थिति ({MONTH_NAMES[now.getMonth() + 1]} {now.getFullYear()})
+          </h2>
+        </div>
+
         {thisMonthPayment ? (
-          <div className={`flex items-center gap-3 p-4 rounded-xl ${
-            thisMonthPayment.status === 'approved' ? 'bg-green-50 border border-green-200' :
-            thisMonthPayment.status === 'pending' ? 'bg-yellow-50 border border-yellow-200' :
-            'bg-red-50 border border-red-200'
+          <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between sm:items-center gap-3 ${
+            thisMonthPayment.status === 'approved' 
+              ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900' 
+              : thisMonthPayment.status === 'pending' 
+              ? 'bg-amber-50/80 border-amber-200 text-amber-900' 
+              : 'bg-rose-50/80 border-rose-200 text-rose-900'
           }`}>
-            <span className="text-3xl">
-              {thisMonthPayment.status === 'approved' ? '✅' : thisMonthPayment.status === 'pending' ? '⏳' : '❌'}
-            </span>
-            <div>
-              <p className="font-semibold">
-                ₹ {thisMonthPayment.amount} — {thisMonthPayment.status === 'approved' ? 'Approved (स्वीकृत)!' : thisMonthPayment.status === 'pending' ? 'Approval का इंतज़ार...' : 'Rejected'}
-              </p>
-              {thisMonthPayment.admin_note && <p className="text-sm text-gray-600">Note: {thisMonthPayment.admin_note}</p>}
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">
+                {thisMonthPayment.status === 'approved' ? '✅' : thisMonthPayment.status === 'pending' ? '⏳' : '❌'}
+              </span>
+              <div>
+                <p className="font-extrabold text-base">
+                  ₹ {thisMonthPayment.amount?.toLocaleString('en-IN')} — {
+                    thisMonthPayment.status === 'approved' ? 'किश्त स्वीकृत (Payment Approved)!' :
+                    thisMonthPayment.status === 'pending' ? 'एडमिन अप्रूवल का इंतज़ार है (Under Review)...' :
+                    'किश्त अस्वीकृत (Rejected)'
+                  }
+                </p>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  रेफरेंस: <span className="font-mono font-bold">{thisMonthPayment.reference_no || 'N/A'}</span>
+                  {thisMonthPayment.admin_note && ` • नोट: ${thisMonthPayment.admin_note}`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                thisMonthPayment.status === 'approved' ? 'bg-emerald-600 text-white' :
+                thisMonthPayment.status === 'pending' ? 'bg-amber-600 text-white' :
+                'bg-rose-600 text-white'
+              }`}>
+                {thisMonthPayment.status}
+              </span>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <span className="text-3xl">💸</span>
-            <div>
-              <p className="font-semibold text-gray-700">इस महीने पेमेंट सबमिट नहीं हुई है</p>
-              <p className="text-sm text-gray-500">कृपया समय पर अपनी किश्त सबमिट करें।</p>
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">💸</span>
+              <div>
+                <p className="font-bold text-amber-900">इस महीने की किश्त अभी जमा नहीं हुई है</p>
+                <p className="text-xs text-amber-700">कृपया लेट फीस से बचने के लिए समय पर UPI से भुगतान कर स्लिप अपलोड करें।</p>
+              </div>
             </div>
+            <Link
+              to="/pay"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-md inline-flex items-center justify-center gap-1.5"
+            >
+              <span>📲</span> UPI से भुगतान करें
+            </Link>
           </div>
-        )}
-        {(!thisMonthPayment || thisMonthPayment?.status === 'rejected') && (
-          <Link to="/pay" className="btn-primary mt-3 inline-block">💰 पेमेंट सबमिट करें</Link>
         )}
       </div>
 
-      {/* Stats */}
+      {/* Committee Overall Summary (Transparency for all members) */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-green-700">₹ {summary.overallTotalCredit?.toLocaleString('en-IN') || 0}</div>
-            <div className="text-xs text-gray-500 mt-1">🟢 कुल जमा (Total Credit)</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+          <div className="card text-center border border-slate-100 shadow-sm">
+            <div className="text-xl sm:text-2xl font-black text-emerald-700">₹ {summary.overallTotalCredit?.toLocaleString('en-IN') || 0}</div>
+            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">🟢 कमिटी कुल जमा</div>
           </div>
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-red-600">₹ {summary.overallTotalDebit?.toLocaleString('en-IN') || 0}</div>
-            <div className="text-xs text-gray-500 mt-1">🔴 कुल उठाया (Total Debit)</div>
+          <div className="card text-center border border-slate-100 shadow-sm">
+            <div className="text-xl sm:text-2xl font-black text-rose-600">₹ {summary.overallTotalDebit?.toLocaleString('en-IN') || 0}</div>
+            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">🔴 कमिटी कुल भुगतान</div>
           </div>
-          <div className="card text-center">
-            <div className="text-2xl font-bold text-blue-600">{summary.paidMembers}/{summary.totalMembers}</div>
-            <div className="text-xs text-gray-500 mt-1">इस महीने भुगतान</div>
+          <div className="card text-center border border-slate-100 shadow-sm">
+            <div className="text-xl sm:text-2xl font-black text-blue-600">{summary.paidMembers}/{summary.totalMembers}</div>
+            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">इस माह जमा सदस्य</div>
           </div>
-          <div className="card text-center">
-            <div className="text-xl font-bold text-yellow-600 truncate">
-              {summary.winner ? `🏆 ${summary.winner.winner_name}` : '⏳ TBD'}
+          <div className="card text-center border border-slate-100 shadow-sm">
+            <div className="text-lg sm:text-xl font-black text-amber-600 truncate">
+              {summary.winner ? `🏆 ${summary.winner.winner_name}` : '⏳ तय नहीं'}
             </div>
-            <div className="text-xs text-gray-500 mt-1">इस महीने का विनर</div>
+            <div className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wide">इस माह का विनर</div>
           </div>
         </div>
       )}
 
-      {/* Recent payments */}
-      <div className="card">
+      {/* Recent Payments Stream */}
+      <div className="card shadow-lg border border-slate-100">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-semibold text-gray-700">📋 हालिया पेमेंट्स (Recent Payments)</h2>
-          <Link to="/history" className="text-primary-600 text-sm hover:underline">सब देखें →</Link>
+          <h2 className="font-bold text-slate-800 flex items-center gap-2">
+            <span>📋</span> आपकी हालिया पेमेंट्स (Recent Payments)
+          </h2>
+          <Link to="/history" className="text-emerald-700 text-xs font-bold hover:underline">
+            सब देखें →
+          </Link>
         </div>
+
         {recentPayments.length === 0 ? (
-          <p className="text-gray-400 text-center py-4">कोई पेमेंट नहीं मिली अभी तक।</p>
+          <div className="text-center py-8 text-slate-400">
+            <span className="text-4xl block mb-2">🧾</span>
+            <p className="text-sm">कोई पेमेंट रिकॉर्ड नहीं मिला।</p>
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-slate-100">
             {recentPayments.map(p => (
-              <div key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <span className="font-semibold text-gray-900">₹ {p.amount}</span>
-                  <span className="text-gray-500 text-sm ml-2">— {MONTH_NAMES[p.month]} {p.year}</span>
+              <div key={p.id} className="py-3 flex justify-between items-center hover:bg-slate-50/60 px-2 rounded-xl transition-all">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm ${
+                    p.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                    p.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                    'bg-rose-100 text-rose-700'
+                  }`}>
+                    ₹
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-800 text-sm">₹ {p.amount?.toLocaleString('en-IN')}</span>
+                    <span className="text-xs text-slate-500 ml-2">({MONTH_NAMES[p.month]} {p.year})</span>
+                    <p className="text-[11px] text-slate-400 font-mono">Ref: {p.reference_no || 'N/A'}</p>
+                  </div>
                 </div>
-                <span className={`badge-${p.status}`}>{p.status}</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                  p.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                  p.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                  'bg-rose-50 text-rose-700 border border-rose-200'
+                }`}>
+                  {p.status}
+                </span>
               </div>
             ))}
           </div>
         )}
       </div>
+
     </div>
   )
 }
