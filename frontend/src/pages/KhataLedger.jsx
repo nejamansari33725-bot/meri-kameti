@@ -34,11 +34,6 @@ export default function KhataLedger() {
       .finally(() => setStatementLoading(false))
   }
 
-  const closeStatement = () => {
-    setSelectedMember(null)
-    setStatement = null
-  }
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -47,7 +42,7 @@ export default function KhataLedger() {
     )
   }
 
-  const summary = data?.summary || { total_credit: 0, total_debit: 0, net_balance: 0, total_members: 0 }
+  const summary = data?.summary || { total_credit: 0, total_late_fine: 0, total_debit: 0, net_balance: 0, total_members: 0 }
   const members = data?.members || []
   const transactions = data?.recentTransactions || []
 
@@ -66,7 +61,7 @@ export default function KhataLedger() {
               <span>📖</span> कमिटी खाता बही (Khata Ledger)
             </h1>
             <p className="text-emerald-100 mt-1">
-              सभी सदस्यों का कुल जमा (Credit) और कुल उठाया गया (Debit) हिसाब-किताब
+              सभी सदस्यों का कुल जमा (Credit), लेट फाइन, और कुल उठाया गया (Debit) हिसाब-किताब
             </p>
           </div>
           <button
@@ -78,33 +73,47 @@ export default function KhataLedger() {
         </div>
       </div>
 
-      {/* Big Highlights: Total Credit, Total Debit, Net Balance */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Highlights: Total Credit, Total Late Fine, Total Debit, Net Balance */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         {/* Total Credit */}
         <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-green-800 uppercase tracking-wider">कुल जमा (Credit)</span>
-            <span className="text-2xl">🟢</span>
+            <span className="text-[11px] font-bold text-green-800 uppercase tracking-wider">कुल जमा (Credit)</span>
+            <span className="text-xl">🟢</span>
           </div>
-          <div className="text-3xl font-extrabold text-green-700 mt-2">
+          <div className="text-2xl font-extrabold text-green-700 mt-2">
             ₹ {summary.total_credit?.toLocaleString('en-IN')}
           </div>
-          <p className="text-xs text-green-600 mt-1">
-            सभी सदस्यों द्वारा जमा की गई कुल राशि
+          <p className="text-[10px] text-green-600 mt-1">
+            मूल किश्तों की कुल राशि
+          </p>
+        </div>
+
+        {/* Total Late Fine */}
+        <div className="card bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">कुल लेट फाइन</span>
+            <span className="text-xl">⚠️</span>
+          </div>
+          <div className="text-2xl font-extrabold text-amber-700 mt-2">
+            ₹ {summary.total_late_fine?.toLocaleString('en-IN') || 0}
+          </div>
+          <p className="text-[10px] text-amber-600 mt-1">
+            विलंब शुल्क से जमा राशि
           </p>
         </div>
 
         {/* Total Debit */}
         <div className="card bg-gradient-to-br from-red-50 to-rose-50 border-red-200">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-red-800 uppercase tracking-wider">कुल उठाया (Debit)</span>
-            <span className="text-2xl">🔴</span>
+            <span className="text-[11px] font-bold text-red-800 uppercase tracking-wider">कुल उठाया (Debit)</span>
+            <span className="text-xl">🔴</span>
           </div>
-          <div className="text-3xl font-extrabold text-red-700 mt-2">
+          <div className="text-2xl font-extrabold text-red-700 mt-2">
             ₹ {summary.total_debit?.toLocaleString('en-IN')}
           </div>
-          <p className="text-xs text-red-600 mt-1">
-            कमेटी विनर को दी गई / उठाई गई कुल राशि
+          <p className="text-[10px] text-red-600 mt-1">
+            कमेटी विनर को दी गई राशि
           </p>
         </div>
 
@@ -115,28 +124,28 @@ export default function KhataLedger() {
             : 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
         }`}>
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-indigo-900 uppercase tracking-wider">तिजोरी शेष (Net Balance)</span>
-            <span className="text-2xl">💼</span>
+            <span className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider">तिजोरी शेष (Net)</span>
+            <span className="text-xl">💼</span>
           </div>
-          <div className={`text-3xl font-extrabold mt-2 ${summary.net_balance >= 0 ? 'text-indigo-700' : 'text-amber-700'}`}>
+          <div className={`text-2xl font-extrabold mt-2 ${summary.net_balance >= 0 ? 'text-indigo-700' : 'text-amber-700'}`}>
             ₹ {summary.net_balance?.toLocaleString('en-IN')}
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            {summary.net_balance >= 0 ? 'कमेटी फंड में मौजूद शेष बचत' : 'अग्रिम दी गई राशि'}
+          <p className="text-[10px] text-gray-500 mt-1">
+            (जमा + लेट फाइन) - उठाया
           </p>
         </div>
 
         {/* Total Members */}
         <div className="card bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-purple-900 uppercase tracking-wider">कुल सदस्य</span>
-            <span className="text-2xl">👥</span>
+            <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wider">कुल सदस्य</span>
+            <span className="text-xl">👥</span>
           </div>
-          <div className="text-3xl font-extrabold text-purple-700 mt-2">
-            {summary.total_members} मेम्बर
+          <div className="text-2xl font-extrabold text-purple-700 mt-2">
+            {summary.total_members} सदस्य
           </div>
-          <p className="text-xs text-purple-600 mt-1">
-            कमेटी में जुड़े सभी सक्रिय सदस्य
+          <p className="text-[10px] text-purple-600 mt-1">
+            कमेटी के सक्रिय प्रतिभागी
           </p>
         </div>
       </div>
@@ -196,6 +205,7 @@ export default function KhataLedger() {
                     <th className="py-3 px-3">सदस्य का नाम</th>
                     <th className="py-3 px-3">मोबाइल</th>
                     <th className="py-3 px-3 text-right text-green-700 font-bold">कुल जमा (Credit)</th>
+                    <th className="py-3 px-3 text-right text-amber-700 font-bold">लेट फाइन</th>
                     <th className="py-3 px-3 text-right text-red-700 font-bold">कुल उठाया (Debit)</th>
                     <th className="py-3 px-3 text-right font-bold">नेट बैलेंस (Net)</th>
                     <th className="py-3 px-3 text-center">कमेटी स्थिति</th>
@@ -208,6 +218,11 @@ export default function KhataLedger() {
                       <td className="py-3.5 px-3 text-gray-400">{idx + 1}</td>
                       <td className="py-3.5 px-3 font-semibold text-gray-900">
                         {m.name}
+                        {m.role === 'admin' && (
+                          <span className="ml-1.5 text-[10px] bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
+                            ADMIN
+                          </span>
+                        )}
                         {m.status === 'inactive' && (
                           <span className="ml-2 text-xs text-red-500 font-normal">(Inactive)</span>
                         )}
@@ -219,6 +234,9 @@ export default function KhataLedger() {
                           {m.total_payments || 0} किश्तें
                         </span>
                       </td>
+                      <td className="py-3.5 px-3 text-right font-bold text-amber-700">
+                        {m.total_late_fine > 0 ? `₹ ${m.total_late_fine.toLocaleString('en-IN')}` : '—'}
+                      </td>
                       <td className="py-3.5 px-3 text-right font-bold text-red-600">
                         ₹ {m.total_debit?.toLocaleString('en-IN')}
                         <span className="block text-[11px] font-normal text-gray-400">
@@ -228,15 +246,15 @@ export default function KhataLedger() {
                       <td className="py-3.5 px-3 text-right">
                         {m.net_balance > 0 ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                            + ₹{m.net_balance.toLocaleString('en-IN')} (जमा)
+                            + ₹{m.net_balance.toLocaleString('en-IN')}
                           </span>
                         ) : m.net_balance < 0 ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                            - ₹{Math.abs(m.net_balance).toLocaleString('en-IN')} (उठाया)
+                            - ₹{Math.abs(m.net_balance).toLocaleString('en-IN')}
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-                            ₹ 0 (बराबर)
+                            ₹ 0
                           </span>
                         )}
                       </td>
@@ -288,6 +306,7 @@ export default function KhataLedger() {
                         <div className="text-xs text-gray-500">
                           {t.type_label} &nbsp;•&nbsp; महीना: {MONTH_NAMES[t.month]} {t.year}
                           {t.reference_no && ` • Ref: ${t.reference_no}`}
+                          {t.late_fine > 0 && <span className="ml-2 text-amber-700 font-bold">(लेट फाइन: ₹{t.late_fine})</span>}
                         </div>
                       </div>
                     </div>
@@ -331,18 +350,22 @@ export default function KhataLedger() {
             ) : statement ? (
               <div className="space-y-4">
                 {/* Statement Summary */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 bg-green-50 rounded-xl border border-green-200 text-center">
-                    <span className="text-xs text-green-700 font-semibold uppercase block">कुल जमा</span>
-                    <span className="text-lg font-bold text-green-700">₹ {statement.total_credit?.toLocaleString('en-IN')}</span>
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="p-2.5 bg-green-50 rounded-xl border border-green-200 text-center">
+                    <span className="text-[10px] text-green-700 font-semibold uppercase block">कुल जमा</span>
+                    <span className="text-base font-bold text-green-700">₹ {statement.total_credit?.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-center">
-                    <span className="text-xs text-red-700 font-semibold uppercase block">कुल उठाया</span>
-                    <span className="text-lg font-bold text-red-700">₹ {statement.total_debit?.toLocaleString('en-IN')}</span>
+                  <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-center">
+                    <span className="text-[10px] text-amber-700 font-semibold uppercase block">लेट फाइन</span>
+                    <span className="text-base font-bold text-amber-700">₹ {statement.total_late_fine?.toLocaleString('en-IN') || 0}</span>
                   </div>
-                  <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200 text-center">
-                    <span className="text-xs text-indigo-700 font-semibold uppercase block">बाकी शेष</span>
-                    <span className={`text-lg font-bold ${statement.net_balance >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>
+                  <div className="p-2.5 bg-red-50 rounded-xl border border-red-200 text-center">
+                    <span className="text-[10px] text-red-700 font-semibold uppercase block">कुल उठाया</span>
+                    <span className="text-base font-bold text-red-700">₹ {statement.total_debit?.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 text-center">
+                    <span className="text-[10px] text-indigo-700 font-semibold uppercase block">बाकी शेष</span>
+                    <span className={`text-base font-bold ${statement.net_balance >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>
                       ₹ {statement.net_balance?.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -381,6 +404,11 @@ export default function KhataLedger() {
                               {MONTH_NAMES[p.month]} {p.year}
                             </span>
                             {p.reference_no && <span className="text-gray-400 ml-2">Ref: {p.reference_no}</span>}
+                            {p.late_fine > 0 && (
+                              <span className="ml-2 bg-amber-100 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                                लेट फाइन: ₹{p.late_fine}
+                              </span>
+                            )}
                             <span className="text-gray-400 block text-[10px]">
                               {new Date(p.submitted_at).toLocaleDateString()}
                             </span>
