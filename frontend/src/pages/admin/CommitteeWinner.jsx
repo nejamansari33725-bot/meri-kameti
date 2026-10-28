@@ -11,6 +11,7 @@ export default function CommitteeWinner() {
   const [year, setYear] = useState(now.getFullYear())
   const [members, setMembers] = useState([])
   const [rounds, setRounds] = useState([])
+  const [payoutRequests, setPayoutRequests] = useState([])
   const [payoutInput, setPayoutInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -18,12 +19,14 @@ export default function CommitteeWinner() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [membersRes, roundsRes] = await Promise.all([
+      const [membersRes, roundsRes, payoutReqRes] = await Promise.all([
         api.get(`/committee/members-status?month=${month}&year=${year}`),
-        api.get('/committee/rounds')
+        api.get('/committee/rounds'),
+        api.get(`/committee/payout-requests?month=${month}&year=${year}`)
       ])
       setMembers(membersRes.data.data)
       setRounds(roundsRes.data.data)
+      setPayoutRequests(payoutReqRes.data.data || [])
       
       const cr = roundsRes.data.data.find(r => r.month === month && r.year === year)
       if (cr) {
@@ -40,21 +43,25 @@ export default function CommitteeWinner() {
 
   useEffect(() => { fetchData() }, [month, year])
 
-  const setWinner = async (memberId, memberName) => {
+  const setWinner = async (memberId, memberName, customAmount) => {
     setSaving(true)
+    const finalPayout = customAmount !== undefined 
+      ? parseFloat(customAmount) 
+      : (payoutInput ? parseFloat(payoutInput) : null)
+
     try {
       await api.post('/committee/rounds', {
         month, 
         year, 
         winner_user_id: memberId,
-        payout_amount: payoutInput ? parseFloat(payoutInput) : null
+        payout_amount: finalPayout
       })
-      toast.success(`🏆 ${memberName} ko winner set kar diya!`)
+      toast.success(`🏆 ${memberName} को विनर सेट कर दिया गया!`)
       fetchData()
 
       // Automatically dispatch winner announcement to WhatsApp group
-      const amt = payoutInput ? parseFloat(payoutInput).toLocaleString('en-IN') : 'कमिटी राशि'
-      const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${memberName}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amt}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      const amtStr = finalPayout ? finalPayout.toLocaleString('en-IN') : 'कमिटी राशि'
+      const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${memberName}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amtStr}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://mera-kameti-app-production.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error.')
@@ -132,6 +139,67 @@ export default function CommitteeWinner() {
           </button>
         </div>
       )}
+
+      {/* NEW SECTION: Member Payout Applications / Bids ("मुझे इस महीने इतना पैसा चाहिए") */}
+      <div className="card border-2 border-amber-300 bg-gradient-to-br from-amber-50/50 via-white to-orange-50/40">
+        <div className="flex flex-wrap justify-between items-center mb-3 gap-2">
+          <div>
+            <h2 className="text-lg font-black text-amber-950 flex items-center gap-2">
+              <span>🙋‍♂️</span> कमिटी उठाने के लिए आए आवेदन (Member Payout Bids) ({payoutRequests.length})
+            </h2>
+            <p className="text-xs text-amber-800">
+              {MONTH_NAMES[month]} {year} में जिन सदस्यों ने पैसा उठाने के लिए अर्जी लगाई है
+            </p>
+          </div>
+        </div>
+
+        {payoutRequests.length === 0 ? (
+          <div className="text-center py-6 text-gray-400 bg-white/60 rounded-xl border border-dashed border-gray-200">
+            <span className="text-3xl block mb-1">📭</span>
+            <p className="text-xs text-gray-500">इस महीने किसी सदस्य ने अभी तक पैसा उठाने के लिए आवेदन नहीं किया है।</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {payoutRequests.map(pr => (
+              <div
+                key={pr.id}
+                className="p-3.5 bg-white rounded-xl border border-amber-200 flex flex-wrap justify-between items-center gap-3 shadow-sm hover:border-amber-400 transition-all"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-gray-900 text-base">{pr.member_name}</span>
+                    <span className="text-xs font-mono text-gray-500">({pr.member_phone})</span>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-2 items-center">
+                    <span className="bg-amber-100 text-amber-900 font-black px-2.5 py-0.5 rounded-lg text-sm">
+                      मांग: ₹{pr.requested_amount?.toLocaleString('en-IN')}
+                    </span>
+                    {pr.reason && (
+                      <span className="italic text-gray-600">
+                        "{pr.reason}"
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPayoutInput(pr.requested_amount)
+                      setWinner(pr.user_id, pr.member_name, pr.requested_amount)
+                    }}
+                    disabled={saving || currentRound?.winner_user_id === pr.user_id}
+                    className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                  >
+                    <span>🏆</span> इस मांग (₹{pr.requested_amount?.toLocaleString('en-IN')}) पर विनर बनाएं
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Members list */}
       <div className="card">

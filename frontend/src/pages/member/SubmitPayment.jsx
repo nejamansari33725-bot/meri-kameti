@@ -11,6 +11,7 @@ export default function SubmitPayment() {
   const [form, setForm] = useState({
     installment_amount: '',
     late_fine: '0',
+    repayment_amount: '',
     reference_no: '',
     note: '',
     month: now.getMonth() + 1,
@@ -71,12 +72,13 @@ export default function SubmitPayment() {
 
   const installment = parseFloat(form.installment_amount) || 0
   const fine = parseFloat(form.late_fine) || 0
-  const totalPayable = installment + fine
+  const repayment = parseFloat(form.repayment_amount) || 0
+  const totalPayable = installment + fine + repayment
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.installment_amount || installment <= 0) {
-      return toast.error('कृपया महीने की किश्त राशि (Amount) दर्ज करें।')
+    if (installment <= 0 && repayment <= 0) {
+      return toast.error('कृपया महीने की किश्त राशि या उठाया हुआ पैसा वापसी दर्ज करें।')
     }
 
     setLoading(true)
@@ -84,6 +86,7 @@ export default function SubmitPayment() {
       const formData = new FormData()
       formData.append('amount', installment)
       formData.append('late_fine', fine)
+      formData.append('repayment_amount', repayment)
       formData.append('reference_no', form.reference_no)
       formData.append('note', form.note)
       formData.append('month', form.month)
@@ -98,6 +101,7 @@ export default function SubmitPayment() {
       setForm({ 
         installment_amount: '', 
         late_fine: '0', 
+        repayment_amount: '',
         reference_no: '', 
         note: '', 
         month: now.getMonth() + 1, 
@@ -133,7 +137,7 @@ export default function SubmitPayment() {
           <span>💳</span> किश्त एवं लेट फाइन भुगतान (Pay Installment)
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          कमिटी की किश्त व लेट फीस की जानकारी दर्ज करें और स्लिप अपलोड करें
+          कमिटी की मासिक किश्त, लेट फाइन या उठाया हुआ पैसा वापस जमा करें और रसीद अपलोड करें
         </p>
       </div>
 
@@ -217,7 +221,7 @@ export default function SubmitPayment() {
           <span>📝</span> पेमेंट सबमिट फॉर्म (Payment Submission)
         </h2>
         <p className="text-xs text-slate-500 mb-5">
-          किश्त और लेट फीस की रकम दर्ज करें और रसीद स्क्रीनशॉट अपलोड करें
+          किश्त, लेट फीस और उठाया हुआ पैसा वापसी की रकम दर्ज करें और रसीद स्क्रीनशॉट अपलोड करें
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -254,7 +258,7 @@ export default function SubmitPayment() {
             </div>
           </div>
 
-          {/* Installment Amount & Late Fine Inputs */}
+          {/* 1. Installment Amount & Late Fine Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200">
             <div>
               <label className="block text-xs font-bold text-emerald-800 uppercase mb-1 flex items-center gap-1">
@@ -264,10 +268,9 @@ export default function SubmitPayment() {
                 type="number"
                 className="input font-bold text-slate-900 text-lg bg-white"
                 placeholder="e.g. 2000, 5000"
-                min="1"
+                min="0"
                 value={form.installment_amount}
                 onChange={e => setForm({ ...form, installment_amount: e.target.value })}
-                required
               />
               <p className="text-[11px] text-slate-500 mt-1">आपकी नियमित मासिक किश्त</p>
             </div>
@@ -288,6 +291,31 @@ export default function SubmitPayment() {
             </div>
           </div>
 
+          {/* 2. Custom Repayment for Withdrawn Committee Money (उठाया हुआ पैसा वापसी) */}
+          <div className="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-200">
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-xs font-bold text-indigo-900 uppercase flex items-center gap-1">
+                <span>🔄</span> उठाया हुआ पैसा वापस जमा (Repay Withdrawn Money ₹)
+              </label>
+              {myStatement && (
+                <span className="text-[11px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-full border border-indigo-200">
+                  बकाया उठाया: ₹{(myStatement.total_debit || 0).toLocaleString('en-IN')}
+                </span>
+              )}
+            </div>
+            <input
+              type="number"
+              className="input font-bold text-indigo-900 text-lg bg-white"
+              placeholder="जितना आपका मन हो उतना भरें (e.g. 1000, 5000)"
+              min="0"
+              value={form.repayment_amount}
+              onChange={e => setForm({ ...form, repayment_amount: e.target.value })}
+            />
+            <p className="text-[11px] text-slate-600 mt-1">
+              💡 यदि आपने पहले कमिटी उठाई है, तो इस महीने जितना पैसा लौटाना चाहते हैं दर्ज करें (यह आपके बकाये से तुरंत कम हो जाएगा)।
+            </p>
+          </div>
+
           {/* Total Payable Highlight Box */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-50 to-emerald-50 border border-emerald-300 flex items-center justify-between">
             <div>
@@ -295,7 +323,7 @@ export default function SubmitPayment() {
                 💰 कुल देय राशि (Total Payable Amount)
               </span>
               <p className="text-xs text-slate-600 mt-0.5">
-                (किश्त: ₹{installment.toLocaleString('en-IN')} + लेट फाइन: ₹{fine.toLocaleString('en-IN')})
+                (किश्त: ₹{installment.toLocaleString('en-IN')} + फाइन: ₹{fine.toLocaleString('en-IN')} + उठाया वापसी: ₹{repayment.toLocaleString('en-IN')})
               </p>
             </div>
             <div className="text-right">
@@ -436,7 +464,7 @@ export default function SubmitPayment() {
           <p className="font-bold text-emerald-900 mb-1">📌 पेमेंट करने का तरीका:</p>
           <p>1. ऊपर दिया गया QR कोड स्कैन करें या UPI ID पर पेमेंट करें।</p>
           <p>2. पेमेंट सफल होने के बाद उसका <strong>Screenshot</strong> लें।</p>
-          <p>3. ऊपर वाले फॉर्म में किश्त व लेट फाइन दर्ज करें, स्क्रीनशॉट अपलोड कर <strong>"पेमेंट सबमिट करें"</strong> दबाएं।</p>
+          <p>3. ऊपर वाले फॉर्म में किश्त, लेट फाइन और उठाया वापसी दर्ज करें, स्क्रीनशॉट अपलोड कर <strong>"पेमेंट सबमिट करें"</strong> दबाएं।</p>
           
           <div className="pt-1 border-t border-emerald-200/60">
             <a

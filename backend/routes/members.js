@@ -19,19 +19,24 @@ function getMembersWithLedger() {
       u.role,
       u.status, 
       u.created_at,
-      COALESCE(p.total_credit, 0) as total_credit,
-      COALESCE(p.total_late_fine, 0) as total_late_fine,
+      u.custom_credit,
+      u.custom_debit,
+      u.custom_late_fine,
+      COALESCE(u.custom_credit, p.total_credit, 0) as total_credit,
+      COALESCE(u.custom_late_fine, p.total_late_fine, 0) as total_late_fine,
       COALESCE(p.approved_count, 0) as total_payments,
-      COALESCE(r.total_debit, 0) as total_debit,
+      COALESCE(p.total_repayment, 0) as total_repayment,
+      COALESCE(u.custom_debit, MAX(0, COALESCE(r.total_debit, 0) - COALESCE(p.total_repayment, 0)), 0) as total_debit,
       COALESCE(r.rounds_won_count, 0) as rounds_won_count,
       COALESCE(r.rounds_won_info, '') as rounds_won_info,
-      ((COALESCE(p.total_credit, 0) + COALESCE(p.total_late_fine, 0)) - COALESCE(r.total_debit, 0)) as net_balance
+      ((COALESCE(u.custom_credit, p.total_credit, 0) + COALESCE(u.custom_late_fine, p.total_late_fine, 0)) - COALESCE(u.custom_debit, MAX(0, COALESCE(r.total_debit, 0) - COALESCE(p.total_repayment, 0)), 0)) as net_balance
     FROM users u
     LEFT JOIN (
       SELECT 
         user_id, 
         SUM(amount) as total_credit, 
         SUM(COALESCE(late_fine, 0)) as total_late_fine,
+        SUM(COALESCE(repayment_amount, 0)) as total_repayment,
         COUNT(id) as approved_count
       FROM payments 
       WHERE status = 'approved'
@@ -175,11 +180,11 @@ router.get('/:id/statement', authMiddleware, (req, res) => {
     return res.status(403).json({ error: 'Sirf apna statement dekh sakte hain.' });
   }
 
-  const member = db.prepare("SELECT id, name, phone, email, role, status, created_at FROM users WHERE id = ?").get(memberId);
+  const member = db.prepare("SELECT id, name, phone, email, role, status, created_at, custom_credit, custom_debit, custom_late_fine FROM users WHERE id = ?").get(memberId);
   if (!member) return res.status(404).json({ error: 'Member nahi mila.' });
 
   const payments = db.prepare(`
-    SELECT id, amount, late_fine, month, year, reference_no, status, admin_note, submitted_at, reviewed_at
+    SELECT id, amount, late_fine, repayment_amount, month, year, reference_no, status, admin_note, submitted_at, reviewed_at
     FROM payments
     WHERE user_id = ?
     ORDER BY year DESC, month DESC
@@ -192,16 +197,24 @@ router.get('/:id/statement', authMiddleware, (req, res) => {
     ORDER BY year DESC, month DESC
   `).all(memberId);
 
-  const totalCredit = payments
+  const totalRepayment = payments
+    .filter(p => p.status === 'approved')
+    .reduce((sum, p) => sum + (p.repayment_amount || 0), 0);
+
+  const calcCredit = payments
     .filter(p => p.status === 'approved')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const totalLateFine = payments
+  const calcLateFine = payments
     .filter(p => p.status === 'approved')
     .reduce((sum, p) => sum + (p.late_fine || 0), 0);
 
-  const totalDebit = roundsWon
-    .reduce((sum, r) => sum + (r.payout_amount > 0 ? r.payout_amount : r.total_collected), 0);
+  const calcDebit = Math.max(0, roundsWon
+    .reduce((sum, r) => sum + (r.payout_amount > 0 ? r.payout_amount : r.total_collected), 0) - totalRepayment);
+
+  const totalCredit = member.custom_credit !== null ? member.custom_credit : calcCredit;
+  const totalDebit = member.custom_debit !== null ? member.custom_debit : calcDebit;
+  const totalLateFine = member.custom_late_fine !== null ? member.custom_late_fine : calcLateFine;
 
   res.json({
     data: {
@@ -209,10 +222,38 @@ router.get('/:id/statement', authMiddleware, (req, res) => {
       total_credit: totalCredit,
       total_late_fine: totalLateFine,
       total_debit: totalDebit,
+      total_repayment: totalRepayment,
       net_balance: (totalCredit + totalLateFine) - totalDebit,
       payments,
       roundsWon
     }
+  });
+});
+
+// Admin Edit Member Khata / Ledger (Credit, Debit, Late Fine directly)
+router.put('/:id/ledger-adjustment', authMiddleware, adminOnly, (req, res) => {
+  const memberId = parseInt(req.params.id);
+  const { total_credit, total_debit, total_late_fine, note } = req.body;
+  const member = db.prepare('SELECT id, name, phone FROM users WHERE id = ?').get(memberId);
+  if (!member) return res.status(404).json({ error: 'Member nahi mila.' });
+
+  const creditVal = (total_credit !== undefined && total_credit !== null && total_credit !== '') ? parseFloat(total_credit) : null;
+  const debitVal = (total_debit !== undefined && total_debit !== null && total_debit !== '') ? parseFloat(total_debit) : null;
+  const fineVal = (total_late_fine !== undefined && total_late_fine !== null && total_late_fine !== '') ? parseFloat(total_late_fine) : null;
+
+  db.prepare(`
+    UPDATE users 
+    SET custom_credit = ?, custom_debit = ?, custom_late_fine = ? 
+    WHERE id = ?
+  `).run(creditVal, debitVal, fineVal, memberId);
+
+  if (member.phone && note) {
+    notifyWhatsApp(member.phone, `ℹ️ Mera Kameti Notice: Admin dwara aapka khata hisab update kiya gaya hai:\nKul Jama (Credit): Rs. ${creditVal !== null ? creditVal : 'N/A'}\nKul Uthaya (Debit): Rs. ${debitVal !== null ? debitVal : 'N/A'}\nLate Fine: Rs. ${fineVal !== null ? fineVal : 'N/A'}\nNote: ${note}`);
+  }
+
+  res.json({ 
+    message: `${member.name} ka khata hisab safaltapoorvak update ho gaya! ✅`,
+    data: { total_credit: creditVal, total_debit: debitVal, total_late_fine: fineVal }
   });
 });
 

@@ -71,6 +71,37 @@ try {
   db.exec(`ALTER TABLE users ADD COLUMN profile_photo TEXT;`);
 } catch (e) {}
 
+// Add repayment_amount column to payments if not exists (for uthaya hua paisa wapsi)
+try {
+  db.exec(`ALTER TABLE payments ADD COLUMN repayment_amount REAL DEFAULT 0;`);
+} catch (e) {}
+
+// Add custom ledger override columns to users for admin direct editing
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN custom_credit REAL DEFAULT NULL;`);
+} catch (e) {}
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN custom_debit REAL DEFAULT NULL;`);
+} catch (e) {}
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN custom_late_fine REAL DEFAULT NULL;`);
+} catch (e) {}
+
+// Create payout_requests table for members to apply for committee payout / bid
+db.exec(`
+  CREATE TABLE IF NOT EXISTS payout_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    month INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    requested_amount REAL NOT NULL,
+    reason TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+`);
+
 // Seed default settings if not exists
 const defaultSettings = [
   ['committee_name', 'Mera Kameti'],

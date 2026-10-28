@@ -20,6 +20,14 @@ export default function Members() {
   const [fineReason, setFineReason] = useState('')
   const [submittingFine, setSubmittingFine] = useState(false)
 
+  // Direct Khata / Ledger Edit Modal state (Admin edit: Total Credit, Debit, Late Fine)
+  const [editKhataModal, setEditKhataModal] = useState(null)
+  const [editCredit, setEditCredit] = useState('')
+  const [editDebit, setEditDebit] = useState('')
+  const [editLateFine, setEditLateFine] = useState('')
+  const [editNote, setEditNote] = useState('')
+  const [savingKhata, setSavingKhata] = useState(false)
+
   const fetchMembers = () => {
     api.get('/members').then(res => setMembers(res.data.data)).finally(() => setLoading(false))
   }
@@ -83,6 +91,26 @@ export default function Members() {
       toast.error(err.response?.data?.error || 'लेट फाइन दर्ज करने में त्रुटि आई।')
     } finally {
       setSubmittingFine(false)
+    }
+  }
+
+  const handleSaveKhata = async (e) => {
+    e.preventDefault()
+    setSavingKhata(true)
+    try {
+      const res = await api.put(`/members/${editKhataModal.id}/ledger-adjustment`, {
+        total_credit: editCredit,
+        total_debit: editDebit,
+        total_late_fine: editLateFine,
+        note: editNote
+      })
+      toast.success(res.data?.message || 'खाता हिसाब अपडेट हो गया! ✅')
+      setEditKhataModal(null)
+      fetchMembers()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'खाता अपडेट करने में त्रुटि आई।')
+    } finally {
+      setSavingKhata(false)
     }
   }
 
@@ -217,53 +245,67 @@ export default function Members() {
                       )}
                     </td>
                     <td className="py-3.5 px-3 text-center">
-                      {m.role === 'admin' ? (
-                        <span className="inline-block text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-lg">
-                          Admin 🛡️
-                        </span>
-                      ) : (
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => handleResetPassword(m.id, m.name)}
-                            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors flex items-center gap-1 shadow-sm"
-                            title="पासवर्ड रीसेट करें"
-                          >
-                            <span>🔑</span> पासवर्ड
-                          </button>
+                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                        {/* 1. Direct Khata / Ledger Edit button */}
+                        <button
+                          onClick={() => {
+                            setEditKhataModal(m)
+                            setEditCredit(m.total_credit || 0)
+                            setEditDebit(m.total_debit || 0)
+                            setEditLateFine(m.total_late_fine || 0)
+                            setEditNote('')
+                          }}
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 transition-colors flex items-center gap-1 shadow-sm"
+                          title="कुल जमा, उठाया और लेट फाइन सीधे बदलें"
+                        >
+                          <span>✏️</span> खाता एडिट
+                        </button>
 
-                          <button
-                            onClick={() => {
-                              setFineModal({ memberId: m.id, memberName: m.name, phone: m.phone })
-                              setFineAmount('')
-                              setFineReason('')
-                            }}
-                            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors flex items-center gap-1 shadow-sm"
-                            title="लेट फाइन जोड़ें"
-                          >
-                            <span>⚡</span> लेट फाइन
-                          </button>
+                        {/* 2. Impose late fine button */}
+                        <button
+                          onClick={() => {
+                            setFineModal({ memberId: m.id, memberName: m.name, phone: m.phone })
+                            setFineAmount('')
+                            setFineReason('')
+                          }}
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors flex items-center gap-1 shadow-sm"
+                          title="लेट फाइन जोड़ें"
+                        >
+                          <span>⚡</span> लेट फाइन
+                        </button>
 
-                          <button
-                            onClick={() => toggleStatus(m.id, m.status)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                              m.status === 'active'
-                                ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-                            }`}
-                            title="एक्टिव या इन-एक्टिव बदलें"
-                          >
-                            {m.status === 'active' ? '🟢 Active' : '⚪ Inactive'}
-                          </button>
+                        {m.role !== 'admin' && (
+                          <>
+                            <button
+                              onClick={() => handleResetPassword(m.id, m.name)}
+                              className="px-2 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors flex items-center gap-1 shadow-sm"
+                              title="पासवर्ड रीसेट करें"
+                            >
+                              <span>🔑</span>
+                            </button>
 
-                          <button
-                            onClick={() => handleRemoveMember(m.id, m.name)}
-                            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center gap-1 shadow-sm"
-                            title="कमिटी से मेम्बर हटाएं"
-                          >
-                            <span>🗑️</span> हटाएं
-                          </button>
-                        </div>
-                      )}
+                            <button
+                              onClick={() => toggleStatus(m.id, m.status)}
+                              className={`px-2 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                                m.status === 'active'
+                                  ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                              }`}
+                              title="एक्टिव या इन-एक्टिव बदलें"
+                            >
+                              {m.status === 'active' ? '🟢' : '⚪'}
+                            </button>
+
+                            <button
+                              onClick={() => handleRemoveMember(m.id, m.name)}
+                              className="px-2 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center gap-1 shadow-sm"
+                              title="कमिटी से मेम्बर हटाएं"
+                            >
+                              <span>🗑️</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -272,6 +314,132 @@ export default function Members() {
           </div>
         )}
       </div>
+
+      {/* Direct Khata / Ledger Adjustment Modal (Admin Edit Paisa) */}
+      {editKhataModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-emerald-300 space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  ✏️ सदस्य खाता एडिट (Edit Member Khata)
+                </span>
+                <h2 className="text-xl font-black text-gray-900 mt-2">
+                  {editKhataModal.name}
+                </h2>
+                <p className="text-xs text-gray-500 font-mono">📱 {editKhataModal.phone}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditKhataModal(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              💡 <strong>नोट:</strong> यहाँ आप सदस्य का कुल जमा (Credit), कुल उठाया हुआ (Debit), और लेट फाइन सीधे बदल सकते हैं। यह परिवर्तन तुरंत सदस्य के खाते और खाता-बही में दिखने लगेगा।
+            </p>
+
+            <form onSubmit={handleSaveKhata} className="space-y-4">
+              
+              {/* Credit Input */}
+              <div>
+                <label className="block text-xs font-bold text-emerald-800 uppercase mb-1 flex items-center justify-between">
+                  <span>🟢 कुल जमा किया (Total Credit ₹)</span>
+                  <span className="text-[10px] text-gray-400 font-normal">पहले था: ₹{editKhataModal.total_credit || 0}</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  placeholder="0"
+                  className="input font-bold text-emerald-700 text-lg"
+                  value={editCredit}
+                  onChange={e => setEditCredit(e.target.value)}
+                />
+                <p className="text-[11px] text-slate-500 mt-0.5">कमिटी में अब तक जमा कुल किश्तें</p>
+              </div>
+
+              {/* Debit Input */}
+              <div>
+                <label className="block text-xs font-bold text-red-800 uppercase mb-1 flex items-center justify-between">
+                  <span>🔴 कुल उठाया हुआ (Total Debit ₹)</span>
+                  <span className="text-[10px] text-gray-400 font-normal">पहले था: ₹{editKhataModal.total_debit || 0}</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  placeholder="0"
+                  className="input font-bold text-red-600 text-lg"
+                  value={editDebit}
+                  onChange={e => setEditDebit(e.target.value)}
+                />
+                <p className="text-[11px] text-slate-500 mt-0.5">कमिटी से अब तक उठाया गया कुल पैसा</p>
+              </div>
+
+              {/* Late Fine Input */}
+              <div>
+                <label className="block text-xs font-bold text-amber-800 uppercase mb-1 flex items-center justify-between">
+                  <span>⚡ कुल लेट फाइन (Total Late Fine ₹)</span>
+                  <span className="text-[10px] text-gray-400 font-normal">पहले था: ₹{editKhataModal.total_late_fine || 0}</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  placeholder="0"
+                  className="input font-bold text-amber-800 text-lg"
+                  value={editLateFine}
+                  onChange={e => setEditLateFine(e.target.value)}
+                />
+                <p className="text-[11px] text-slate-500 mt-0.5">कुल लगाया गया लेट जुर्माना</p>
+              </div>
+
+              {/* Calculated Net Preview */}
+              <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-200 flex justify-between items-center text-xs">
+                <span className="font-bold text-indigo-900">नया नेट बैलेंस (Net Balance Preview):</span>
+                <span className="font-extrabold text-sm text-indigo-700">
+                  ₹ {((parseFloat(editCredit || 0) + parseFloat(editLateFine || 0)) - parseFloat(editDebit || 0)).toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              {/* Note */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  📝 कारण या टिप्पणी (Reason / Note)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. कैश से जमा किया / हिसाब मिलान किया"
+                  className="input text-sm"
+                  value={editNote}
+                  onChange={e => setEditNote(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditKhataModal(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-300 font-bold text-sm text-gray-700 hover:bg-gray-50 transition-all"
+                >
+                  रद्द करें (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingKhata}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-sm text-white shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-1.5"
+                >
+                  {savingKhata ? 'सेव हो रहा है...' : '💾 खाता सुरक्षित करें'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Late Fine Modal for Admin */}
       {fineModal && (

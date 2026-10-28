@@ -29,16 +29,17 @@ const upload = multer({
 
 // Submit payment (member or admin)
 router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
-  const { amount, reference_no, note, month, year, late_fine } = req.body;
+  const { amount, reference_no, note, month, year, late_fine, repayment_amount } = req.body;
   if (!amount || !month || !year) {
     return res.status(400).json({ error: 'Amount, month aur year zaroori hain.' });
   }
   const screenshotPath = req.file ? `/uploads/${req.file.filename}` : null;
   const fine = late_fine && parseFloat(late_fine) > 0 ? parseFloat(late_fine) : 0;
+  const repayment = repayment_amount && parseFloat(repayment_amount) > 0 ? parseFloat(repayment_amount) : 0;
 
   // Check if already submitted for this month
   const existing = db.prepare(
-    'SELECT id, amount, late_fine FROM payments WHERE user_id = ? AND month = ? AND year = ? AND status != ?'
+    'SELECT id, amount, late_fine, repayment_amount FROM payments WHERE user_id = ? AND month = ? AND year = ? AND status != ?'
   ).get(req.user.id, parseInt(month), parseInt(year), 'rejected');
 
   let paymentId;
@@ -50,12 +51,13 @@ router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
       const totalFine = fine > 0 ? fine : (existing.late_fine || 0);
       db.prepare(`
         UPDATE payments 
-        SET amount = ?, late_fine = ?, screenshot_path = ?, reference_no = ?, note = ?, 
+        SET amount = ?, late_fine = ?, repayment_amount = ?, screenshot_path = ?, reference_no = ?, note = ?, 
             status = ?, submitted_at = CURRENT_TIMESTAMP, reviewed_at = ?
         WHERE id = ?
       `).run(
         parseFloat(amount),
         totalFine,
+        repayment,
         screenshotPath,
         reference_no || null,
         note || null,
@@ -69,12 +71,13 @@ router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
     }
   } else {
     const result = db.prepare(`
-      INSERT INTO payments (user_id, amount, late_fine, screenshot_path, reference_no, note, month, year, status, reviewed_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO payments (user_id, amount, late_fine, repayment_amount, screenshot_path, reference_no, note, month, year, status, reviewed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       req.user.id, 
       parseFloat(amount), 
       fine, 
+      repayment,
       screenshotPath, 
       reference_no || null, 
       note || null, 
@@ -90,7 +93,9 @@ router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
   if (req.user.role !== 'admin') {
     const admin = db.prepare("SELECT phone FROM users WHERE role = 'admin' LIMIT 1").get();
     if (admin) {
-      notifyWhatsApp(admin.phone, `💰 Naya payment submit hua!\nMember: ${req.user.name}\nAmount: Rs. ${amount}\nMonth: ${month}/${year}\nRef: ${reference_no || 'N/A'}`);
+      const repMsg = repayment > 0 ? `\nUthaya Paisa Wapsi: Rs. ${repayment}` : '';
+      const fineMsg = fine > 0 ? `\nLate Fine: Rs. ${fine}` : '';
+      notifyWhatsApp(admin.phone, `💰 Naya payment submit hua!\nMember: ${req.user.name}\nKisht: Rs. ${amount}${repMsg}${fineMsg}\nTotal: Rs. ${parseFloat(amount) + repayment + fine}\nMonth: ${month}/${year}\nRef: ${reference_no || 'N/A'}`);
     }
   }
 
@@ -154,6 +159,20 @@ router.put('/:id/approve', authMiddleware, adminOnly, (req, res) => {
     SET status = 'approved', admin_note = ?, late_fine = ?, reviewed_at = CURRENT_TIMESTAMP 
     WHERE id = ?
   `).run(admin_note || null, fine, req.params.id);
+
+  // If member has custom ledger baseline, update it with newly approved amounts
+  if (payment.amount > 0) {
+    db.prepare('UPDATE users SET custom_credit = custom_credit + ? WHERE id = ? AND custom_credit IS NOT NULL')
+      .run(payment.amount, payment.user_id);
+  }
+  if (payment.repayment_amount > 0) {
+    db.prepare('UPDATE users SET custom_debit = MAX(0, custom_debit - ?) WHERE id = ? AND custom_debit IS NOT NULL')
+      .run(payment.repayment_amount, payment.user_id);
+  }
+  if (fine > 0) {
+    db.prepare('UPDATE users SET custom_late_fine = custom_late_fine + ? WHERE id = ? AND custom_late_fine IS NOT NULL')
+      .run(fine, payment.user_id);
+  }
 
   // Notify member
   const member = db.prepare('SELECT name, phone FROM users WHERE id = ?').get(payment.user_id);

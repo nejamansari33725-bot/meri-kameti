@@ -149,4 +149,63 @@ router.get('/members-status', authMiddleware, adminOnly, (req, res) => {
   res.json({ data: members });
 });
 
+// Member Apply for Committee Payout / Bid
+router.post('/apply-payout', authMiddleware, (req, res) => {
+  const { month, year, requested_amount, reason } = req.body;
+  if (!month || !year || !requested_amount) {
+    return res.status(400).json({ error: 'Month, Year aur Requested Amount bharna zaroori hai.' });
+  }
+
+  const amt = parseFloat(requested_amount);
+  if (isNaN(amt) || amt <= 0) {
+    return res.status(400).json({ error: 'Valid amount daalen.' });
+  }
+
+  // Check if member already applied for this month
+  const existing = db.prepare('SELECT id FROM payout_requests WHERE user_id = ? AND month = ? AND year = ? AND status = "pending"').get(req.user.id, parseInt(month), parseInt(year));
+  if (existing) {
+    db.prepare('UPDATE payout_requests SET requested_amount = ?, reason = ? WHERE id = ?').run(amt, reason || null, existing.id);
+    return res.json({ message: 'Aapka aavedan update ho gaya! ✅' });
+  }
+
+  db.prepare(`
+    INSERT INTO payout_requests (user_id, month, year, requested_amount, reason)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(req.user.id, parseInt(month), parseInt(year), amt, reason || null);
+
+  // Notify admin
+  const admin = db.prepare("SELECT phone FROM users WHERE role = 'admin' LIMIT 1").get();
+  if (admin) {
+    notifyWhatsApp(admin.phone, `🙋‍♂️ Naya Committee Payout Application!\nMember: ${req.user.name} (${req.user.phone})\nMaangi gayi Rakam: Rs. ${amt}\nMonth: ${month}/${year}\nReason: ${reason || 'Zaroorat'}`);
+  }
+
+  res.json({ message: 'Aapka aavedan safaltapoorvak bhej diya gaya hai! Admin winner chunenge tab faisla hoga. ✅' });
+});
+
+// Member Get My Payout Requests
+router.get('/my-payout-requests', authMiddleware, (req, res) => {
+  const requests = db.prepare(`
+    SELECT * FROM payout_requests WHERE user_id = ? ORDER BY created_at DESC
+  `).all(req.user.id);
+  res.json({ data: requests });
+});
+
+// Admin Get Payout Requests for a Month
+router.get('/payout-requests', authMiddleware, adminOnly, (req, res) => {
+  const { month, year } = req.query;
+  let query = `
+    SELECT pr.*, u.name as member_name, u.phone as member_phone
+    FROM payout_requests pr
+    JOIN users u ON pr.user_id = u.id
+    WHERE 1=1
+  `;
+  const params = [];
+  if (month) { query += ' AND pr.month = ?'; params.push(parseInt(month)); }
+  if (year) { query += ' AND pr.year = ?'; params.push(parseInt(year)); }
+  query += ' ORDER BY pr.created_at DESC';
+
+  const requests = db.prepare(query).all(...params);
+  res.json({ data: requests });
+});
+
 module.exports = router;

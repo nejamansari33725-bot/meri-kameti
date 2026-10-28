@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
 
@@ -8,19 +9,30 @@ const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
 
 export default function MemberDashboard() {
   const { user } = useAuth()
+  const now = new Date()
   const [summary, setSummary] = useState(null)
   const [recentPayments, setRecentPayments] = useState([])
   const [myStatement, setMyStatement] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  // Payout application state ("मुझे इस महीने इतना पैसा चाहिए")
+  const [applyMonth, setApplyMonth] = useState(now.getMonth() + 1)
+  const [applyYear, setApplyYear] = useState(now.getFullYear())
+  const [requestedAmount, setRequestedAmount] = useState('')
+  const [payoutReason, setPayoutReason] = useState('')
+  const [submittingPayout, setSubmittingPayout] = useState(false)
+  const [myPayoutRequests, setMyPayoutRequests] = useState([])
+
+  const loadData = () => {
     Promise.all([
       api.get('/committee/summary'),
       api.get('/payments/my'),
-      api.get('/auth/me')
-    ]).then(([s, p, me]) => {
+      api.get('/auth/me'),
+      api.get('/committee/my-payout-requests')
+    ]).then(([s, p, me, pr]) => {
       setSummary(s.data.data)
       setRecentPayments(p.data.data.slice(0, 5))
+      setMyPayoutRequests(pr.data.data || [])
       if (me.data?.data?.id) {
         return api.get(`/members/${me.data.data.id}/statement`)
       }
@@ -30,7 +42,35 @@ export default function MemberDashboard() {
       }
     }).catch(err => console.error(err))
     .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadData()
   }, [])
+
+  const handleApplyPayout = async (e) => {
+    e.preventDefault()
+    if (!requestedAmount || parseFloat(requestedAmount) <= 0) {
+      return toast.error('कृपया मांगी जाने वाली राशि (Amount) दर्ज करें।')
+    }
+    setSubmittingPayout(true)
+    try {
+      const res = await api.post('/committee/apply-payout', {
+        month: applyMonth,
+        year: applyYear,
+        requested_amount: parseFloat(requestedAmount),
+        reason: payoutReason
+      })
+      toast.success(res.data.message || 'आवेदन सबमिट हो गया! ✅')
+      setRequestedAmount('')
+      setPayoutReason('')
+      api.get('/committee/my-payout-requests').then(r => setMyPayoutRequests(r.data.data || []))
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'आवेदन सबमिट नहीं हो सका।')
+    } finally {
+      setSubmittingPayout(false)
+    }
+  }
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -38,8 +78,8 @@ export default function MemberDashboard() {
     </div>
   )
 
-  const now = new Date()
   const thisMonthPayment = recentPayments.find(p => p.month === now.getMonth() + 1 && p.year === now.getFullYear())
+  const thisMonthRequest = myPayoutRequests.find(r => r.month === applyMonth && r.year === applyYear)
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
@@ -96,7 +136,7 @@ export default function MemberDashboard() {
               to="/pay"
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2"
             >
-              <span>💳</span> किश्त जमा करें (Pay Now)
+              <span>💳</span> किश्त / वापसी जमा करें
             </Link>
             <Link
               to="/ledger"
@@ -190,7 +230,9 @@ export default function MemberDashboard() {
               <p className="text-2xl font-black text-rose-600 mt-2">
                 ₹ {myStatement.total_debit?.toLocaleString('en-IN') || 0}
               </p>
-              <p className="text-[11px] text-rose-600 mt-1 font-medium">कमिटी से मिला पेआउट</p>
+              <p className="text-[11px] text-rose-600 mt-1 font-medium">
+                {myStatement.roundsWon?.length > 0 ? `🏆 ${myStatement.roundsWon.length} बार उठाया` : 'अभी नहीं उठाया'}
+              </p>
             </div>
 
             {/* Net Balance Card */}
@@ -211,6 +253,128 @@ export default function MemberDashboard() {
           </div>
         </div>
       )}
+
+      {/* NEW FEATURE: Payout Application Form / Bidding ("🙋‍♂️ मुझे इस महीने कमिटी का पैसा चाहिए") */}
+      <div className="card shadow-lg border border-amber-200 bg-gradient-to-br from-amber-50/40 via-white to-orange-50/30 space-y-4">
+        <div className="flex flex-wrap justify-between items-start gap-2">
+          <div>
+            <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+              🙋‍♂️ कमिटी लेने के लिए आवेदन (Apply for Committee Payout / Bid)
+            </span>
+            <h2 className="text-lg font-black text-slate-900 mt-2">
+              क्या आपको इस महीने कमिटी का पैसा उठाना है?
+            </h2>
+            <p className="text-xs text-slate-600 mt-0.5">
+              अपनी इच्छित रकम और कारण दर्ज करके एडमिन को भेजें। एडमिन विनर चुनते समय आपका आवेदन देखेगा।
+            </p>
+          </div>
+          {thisMonthRequest && (
+            <span className="bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full text-xs font-bold">
+              ⏳ आवेदन सबमिट है: ₹{thisMonthRequest.requested_amount?.toLocaleString('en-IN')}
+            </span>
+          )}
+        </div>
+
+        <form onSubmit={handleApplyPayout} className="space-y-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                📅 किस महीने के लिए?
+              </label>
+              <select
+                className="input text-sm font-semibold"
+                value={applyMonth}
+                onChange={e => setApplyMonth(parseInt(e.target.value))}
+              >
+                {MONTH_NAMES.slice(1).map((m, i) => (
+                  <option key={i + 1} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                📅 वर्ष (Year)
+              </label>
+              <select
+                className="input text-sm font-semibold"
+                value={applyYear}
+                onChange={e => setApplyYear(parseInt(e.target.value))}
+              >
+                {[2024, 2025, 2026, 2027].map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-amber-900 uppercase mb-1">
+                💰 मुझे इतना पैसा चाहिए (Amount ₹) *
+              </label>
+              <input
+                type="number"
+                min="1"
+                required
+                className="input font-bold text-amber-950 text-base"
+                placeholder="e.g. 25000, 50000"
+                value={requestedAmount}
+                onChange={e => setRequestedAmount(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              📝 कारण या आवश्यकता (Reason / Note)
+            </label>
+            <input
+              type="text"
+              className="input text-sm"
+              placeholder="e.g. व्यापार / घर का खर्च / जरूरी कार्य के लिए..."
+              value={payoutReason}
+              onChange={e => setPayoutReason(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <span className="text-xs text-slate-500">
+              💡 एडमिन इस आवेदन को देखकर इस माह का विनर चुनेंगे।
+            </span>
+            <button
+              type="submit"
+              disabled={submittingPayout}
+              className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md shadow-amber-600/30 transition-all flex items-center gap-1.5"
+            >
+              {submittingPayout ? 'भेज रहे हैं...' : '🙋‍♂️ कमिटी लेने के लिए आवेदन सबमिट करें'}
+            </button>
+          </div>
+        </form>
+
+        {/* Existing Application List */}
+        {myPayoutRequests.length > 0 && (
+          <div className="pt-3 border-t border-amber-200/60">
+            <p className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
+              📋 आपके पिछले आवेदन (Your Applications):
+            </p>
+            <div className="space-y-1.5">
+              {myPayoutRequests.slice(0, 3).map(r => (
+                <div key={r.id} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-amber-100 text-xs">
+                  <div>
+                    <span className="font-bold text-slate-800">{MONTH_NAMES[r.month]} {r.year}</span>
+                    <span className="text-amber-800 font-extrabold ml-2">₹ {r.requested_amount?.toLocaleString('en-IN')}</span>
+                    {r.reason && <span className="text-slate-500 ml-2">({r.reason})</span>}
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    r.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {r.status === 'approved' ? '🏆 स्वीकृत (Won)' : '⏳ समीक्षाधीन (Pending)'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* This Month's Payment Status */}
       <div className="card shadow-lg border border-slate-100">
@@ -242,6 +406,7 @@ export default function MemberDashboard() {
                 </p>
                 <p className="text-xs text-slate-600 mt-0.5">
                   रेफरेंस: <span className="font-mono font-bold">{thisMonthPayment.reference_no || 'N/A'}</span>
+                  {thisMonthPayment.repayment_amount > 0 && ` • उठाया वापसी: ₹${thisMonthPayment.repayment_amount}`}
                   {thisMonthPayment.admin_note && ` • नोट: ${thisMonthPayment.admin_note}`}
                 </p>
               </div>
@@ -330,6 +495,9 @@ export default function MemberDashboard() {
                   </div>
                   <div>
                     <span className="font-bold text-slate-800 text-sm">₹ {p.amount?.toLocaleString('en-IN')}</span>
+                    {p.repayment_amount > 0 && (
+                      <span className="text-xs text-indigo-700 font-bold ml-1.5">(+ ₹{p.repayment_amount} वापसी)</span>
+                    )}
                     <span className="text-xs text-slate-500 ml-2">({MONTH_NAMES[p.month]} {p.year})</span>
                     <p className="text-[11px] text-slate-400 font-mono">Ref: {p.reference_no || 'N/A'}</p>
                   </div>
