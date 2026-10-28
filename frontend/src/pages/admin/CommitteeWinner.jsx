@@ -11,6 +11,7 @@ export default function CommitteeWinner() {
   const [year, setYear] = useState(now.getFullYear())
   const [members, setMembers] = useState([])
   const [rounds, setRounds] = useState([])
+  const [payoutInput, setPayoutInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -23,6 +24,13 @@ export default function CommitteeWinner() {
       ])
       setMembers(membersRes.data.data)
       setRounds(roundsRes.data.data)
+      
+      const cr = roundsRes.data.data.find(r => r.month === month && r.year === year)
+      if (cr) {
+        setPayoutInput(cr.payout_amount || cr.total_collected || '')
+      } else {
+        setPayoutInput('')
+      }
     } catch {
       toast.error('Data load nahi hua.')
     } finally {
@@ -36,7 +44,10 @@ export default function CommitteeWinner() {
     setSaving(true)
     try {
       await api.post('/committee/rounds', {
-        month, year, winner_user_id: memberId
+        month, 
+        year, 
+        winner_user_id: memberId,
+        payout_amount: payoutInput ? parseFloat(payoutInput) : null
       })
       toast.success(`🏆 ${memberName} ko winner set kar diya!`)
       fetchData()
@@ -48,75 +59,116 @@ export default function CommitteeWinner() {
   }
 
   const currentRound = rounds.find(r => r.month === month && r.year === year)
+  const totalThisMonthPaid = members.reduce((sum, m) => sum + (m.amount ? parseFloat(m.amount) : 0), 0)
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-6">
-      {/* Select month */}
-      <div className="card">
-        <h1 className="text-2xl font-bold text-primary-700 mb-4">🏆 Committee Winner Select Karein</h1>
-        <div className="flex gap-3 flex-wrap">
+      {/* Select month & Payout Amount */}
+      <div className="card space-y-4">
+        <h1 className="text-2xl font-bold text-primary-700">🏆 Committee Winner Select Karein</h1>
+        
+        <div className="flex flex-wrap gap-4 items-end">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">महीना (Month)</label>
             <select className="input w-40" value={month} onChange={e => setMonth(parseInt(e.target.value))}>
               {MONTH_NAMES.slice(1).map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">वर्ष (Year)</label>
             <select className="input w-28" value={year} onChange={e => setYear(parseInt(e.target.value))}>
               {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              उठाई जाने वाली राशि (Payout Amount ₹)
+              <span className="text-xs text-gray-400 font-normal ml-1">
+                (कुल जमा: ₹{totalThisMonthPaid.toLocaleString('en-IN')})
+              </span>
+            </label>
+            <input
+              type="number"
+              className="input"
+              placeholder={`₹ ${totalThisMonthPaid || 'कुल जमा'}`}
+              value={payoutInput}
+              onChange={e => setPayoutInput(e.target.value)}
+            />
           </div>
         </div>
       </div>
 
       {/* Current winner */}
       {currentRound?.winner_name && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center gap-3">
-          <span className="text-4xl">🏆</span>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 flex items-center gap-4 shadow-sm">
+          <span className="text-5xl">🏆</span>
           <div>
-            <p className="font-bold text-yellow-800 text-lg">{currentRound.winner_name}</p>
-            <p className="text-yellow-600 text-sm">{MONTH_NAMES[month]} {year} ka winner — Rs. {currentRound.total_collected?.toFixed(0)} collected</p>
+            <p className="font-extrabold text-yellow-900 text-xl">{currentRound.winner_name}</p>
+            <p className="text-yellow-700 text-sm mt-0.5">
+              {MONTH_NAMES[month]} {year} के विनर — इन्होंने 
+              <span className="font-bold text-red-700 mx-1">
+                ₹ {(currentRound.payout_amount || currentRound.total_collected)?.toLocaleString('en-IN')}
+              </span> 
+              कमेटी उठाई है (Debit दर्ज हो गया)।
+            </p>
           </div>
         </div>
       )}
 
       {/* Members list */}
       <div className="card">
-        <h2 className="font-semibold text-gray-700 mb-4">
-          Members — {MONTH_NAMES[month]} {year} Payment Status
+        <h2 className="font-semibold text-gray-800 mb-3">
+          सदस्यों की सूची — {MONTH_NAMES[month]} {year} Payment Status
         </h2>
+        <p className="text-xs text-gray-500 mb-4">
+          जिस सदस्य को विनर चुनेंगे, उनके खाते में ₹{(payoutInput || totalThisMonthPaid || 0).toLocaleString('en-IN')} Debit (उठाया) के रूप में दर्ज हो जाएगा।
+        </p>
 
         {loading ? (
           <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div></div>
         ) : members.length === 0 ? (
-          <p className="text-gray-400 text-center py-4">Koi member nahi mila.</p>
+          <p className="text-gray-400 text-center py-4">कोई सदस्य नहीं मिला।</p>
         ) : (
           <div className="space-y-2">
             {members.map(m => (
-              <div key={m.id} className={`flex justify-between items-center p-4 rounded-xl border ${
-                currentRound?.winner_user_id === m.id ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-200'
+              <div key={m.id} className={`flex flex-wrap justify-between items-center p-4 rounded-xl border transition-all ${
+                currentRound?.winner_user_id === m.id ? 'bg-yellow-50/80 border-yellow-400 shadow-sm' : 'bg-gray-50/70 border-gray-200 hover:bg-gray-50'
               }`}>
-                <div>
-                  <span className="font-medium">{m.name}</span>
-                  <span className="text-gray-500 text-sm ml-2">({m.phone})</span>
-                  {m.amount ? (
-                    <span className="ml-2 badge-approved">✅ Rs. {m.amount} paid</span>
-                  ) : (
-                    <span className="ml-2 badge-rejected">❌ Payment nahi</span>
-                  )}
-                  {currentRound?.winner_user_id === m.id && <span className="ml-2 text-yellow-600 font-bold">🏆 Winner!</span>}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900 text-base">{m.name}</span>
+                    <span className="text-gray-500 text-xs font-mono">({m.phone})</span>
+                    {currentRound?.winner_user_id === m.id && (
+                      <span className="bg-yellow-400 text-yellow-900 text-xs px-2 py-0.5 rounded-full font-bold ml-1">
+                        🏆 इस महीने के विनर
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 text-xs">
+                    {m.amount ? (
+                      <span className="badge-approved">✅ ₹{m.amount} जमा (Approved)</span>
+                    ) : (
+                      <span className="badge-rejected">❌ इस माह भुगतान नहीं</span>
+                    )}
+                    {m.previous_wins > 0 && (
+                      <span className="text-amber-800 font-medium">
+                        • पहले {m.previous_wins} बार कमिटी उठा चुके हैं
+                      </span>
+                    )}
+                  </div>
                 </div>
+
                 <button
                   onClick={() => setWinner(m.id, m.name)}
                   disabled={saving || currentRound?.winner_user_id === m.id}
-                  className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`text-sm px-4 py-2 rounded-lg font-bold transition-all shadow-sm ${
                     currentRound?.winner_user_id === m.id
-                      ? 'bg-yellow-200 text-yellow-800 cursor-default'
+                      ? 'bg-yellow-200 text-yellow-800 cursor-default shadow-none'
                       : 'bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50'
                   }`}
                 >
-                  {currentRound?.winner_user_id === m.id ? '🏆 Current Winner' : 'Winner Set Karein'}
+                  {currentRound?.winner_user_id === m.id ? '✓ चयनित विनर' : '🏆 विनर चुनें'}
                 </button>
               </div>
             ))}
@@ -126,16 +178,18 @@ export default function CommitteeWinner() {
 
       {/* Past winners */}
       <div className="card">
-        <h2 className="font-semibold text-gray-700 mb-4">📜 Past Winners</h2>
+        <h2 className="font-semibold text-gray-800 mb-3">📜 कमिटी उठाने वाले पिछले विनर (Past Debits)</h2>
         {rounds.filter(r => r.winner_name).length === 0 ? (
-          <p className="text-gray-400 text-center py-4">Abhi koi winner nahi tha.</p>
+          <p className="text-gray-400 text-center py-4">अभी तक किसी ने कमिटी नहीं उठाई है।</p>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-gray-100">
             {rounds.filter(r => r.winner_name).map(r => (
-              <div key={r.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span>{MONTH_NAMES[r.month]} {r.year}</span>
-                <span className="font-medium">🏆 {r.winner_name}</span>
-                <span className="text-primary-600 font-bold">Rs. {r.total_collected?.toFixed(0)}</span>
+              <div key={r.id} className="flex justify-between items-center py-3 px-2 hover:bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-500">{MONTH_NAMES[r.month]} {r.year}</span>
+                <span className="font-bold text-gray-900">🏆 {r.winner_name}</span>
+                <span className="text-red-600 font-extrabold text-sm">
+                  - ₹ {(r.payout_amount || r.total_collected)?.toLocaleString('en-IN')}
+                </span>
               </div>
             ))}
           </div>
