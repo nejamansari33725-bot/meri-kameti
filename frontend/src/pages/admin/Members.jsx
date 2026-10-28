@@ -37,6 +37,7 @@ export default function Members() {
   )
 
   const totalCreditAll = members.reduce((s, m) => s + (m.total_credit || 0), 0)
+  const totalLateFineAll = members.reduce((s, m) => s + (m.total_late_fine || 0), 0)
   const totalDebitAll = members.reduce((s, m) => s + (m.total_debit || 0), 0)
 
   return (
@@ -46,7 +47,7 @@ export default function Members() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div>
             <h1 className="text-2xl font-bold text-primary-700">👥 Members Management ({members.length})</h1>
-            <p className="text-gray-500 text-sm">सभी मेम्बर्स का जमा (Credit) और उठाया गया (Debit) हिसाब</p>
+            <p className="text-gray-500 text-sm">सभी मेम्बर्स का जमा (Credit), लेट फाइन और उठाया गया (Debit) हिसाब</p>
           </div>
           <Link to="/admin/ledger" className="btn-primary text-sm flex items-center gap-1.5">
             <span>📖</span> पूरा खाता बही देखें →
@@ -54,18 +55,22 @@ export default function Members() {
         </div>
 
         {/* Quick Summary Chips */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-3 border-t border-gray-100">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-gray-100">
           <div className="p-3 bg-green-50 rounded-xl border border-green-200">
-            <span className="text-xs text-green-700 uppercase font-semibold block">कुल जमा (All Members Credit)</span>
+            <span className="text-xs text-green-700 uppercase font-semibold block">कुल जमा (Credit)</span>
             <span className="text-xl font-extrabold text-green-700">₹ {totalCreditAll.toLocaleString('en-IN')}</span>
           </div>
+          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+            <span className="text-xs text-amber-700 uppercase font-semibold block">कुल लेट फाइन</span>
+            <span className="text-xl font-extrabold text-amber-700">₹ {totalLateFineAll.toLocaleString('en-IN')}</span>
+          </div>
           <div className="p-3 bg-red-50 rounded-xl border border-red-200">
-            <span className="text-xs text-red-700 uppercase font-semibold block">कुल उठाया (All Members Debit)</span>
+            <span className="text-xs text-red-700 uppercase font-semibold block">कुल उठाया (Debit)</span>
             <span className="text-xl font-extrabold text-red-700">₹ {totalDebitAll.toLocaleString('en-IN')}</span>
           </div>
-          <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200 col-span-2 md:col-span-1">
-            <span className="text-xs text-indigo-700 uppercase font-semibold block">तिजोरी बाकी (Net Balance)</span>
-            <span className="text-xl font-extrabold text-indigo-700">₹ {(totalCreditAll - totalDebitAll).toLocaleString('en-IN')}</span>
+          <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+            <span className="text-xs text-indigo-700 uppercase font-semibold block">तिजोरी बाकी (Net)</span>
+            <span className="text-xl font-extrabold text-indigo-700">₹ {((totalCreditAll + totalLateFineAll) - totalDebitAll).toLocaleString('en-IN')}</span>
           </div>
         </div>
       </div>
@@ -97,8 +102,9 @@ export default function Members() {
                   <th className="py-3 px-3">मेम्बर का नाम</th>
                   <th className="py-3 px-3">मोबाइल</th>
                   <th className="py-3 px-3 text-right text-green-700">कुल जमा (Credit)</th>
+                  <th className="py-3 px-3 text-right text-amber-700">लेट फाइन</th>
                   <th className="py-3 px-3 text-right text-red-700">कुल उठाया (Debit)</th>
-                  <th className="py-3 px-3 text-right font-bold">नेट बैलेंस (Net)</th>
+                  <th className="py-3 px-3 text-right font-bold">नेट बैलेंस</th>
                   <th className="py-3 px-3 text-center">कमेटी स्थिति</th>
                   <th className="py-3 px-3 text-center">Status</th>
                 </tr>
@@ -107,10 +113,20 @@ export default function Members() {
                 {filtered.map((m, i) => (
                   <tr key={m.id} className="hover:bg-gray-50">
                     <td className="py-3.5 px-3 text-gray-400">{i + 1}</td>
-                    <td className="py-3.5 px-3 font-semibold text-gray-900">{m.name}</td>
+                    <td className="py-3.5 px-3 font-semibold text-gray-900">
+                      {m.name}
+                      {m.role === 'admin' && (
+                        <span className="ml-1.5 text-[10px] bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
+                          ADMIN
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3.5 px-3 text-gray-600 font-mono text-xs">{m.phone}</td>
                     <td className="py-3.5 px-3 text-right font-bold text-green-600">
                       ₹ {m.total_credit?.toLocaleString('en-IN')}
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-bold text-amber-700">
+                      {m.total_late_fine > 0 ? `₹ ${m.total_late_fine.toLocaleString('en-IN')}` : '—'}
                     </td>
                     <td className="py-3.5 px-3 text-right font-bold text-red-600">
                       ₹ {m.total_debit?.toLocaleString('en-IN')}
@@ -118,11 +134,11 @@ export default function Members() {
                     <td className="py-3.5 px-3 text-right">
                       {m.net_balance > 0 ? (
                         <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                          + ₹{m.net_balance.toLocaleString('en-IN')} (जमा)
+                          + ₹{m.net_balance.toLocaleString('en-IN')}
                         </span>
                       ) : m.net_balance < 0 ? (
                         <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                          - ₹{Math.abs(m.net_balance).toLocaleString('en-IN')} (उठाया)
+                          - ₹{Math.abs(m.net_balance).toLocaleString('en-IN')}
                         </span>
                       ) : (
                         <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
@@ -140,16 +156,20 @@ export default function Members() {
                       )}
                     </td>
                     <td className="py-3.5 px-3 text-center">
-                      <button
-                        onClick={() => toggleStatus(m.id, m.status)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                          m.status === 'active'
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                            : 'bg-red-100 text-red-700 hover:bg-red-200'
-                        }`}
-                      >
-                        {m.status === 'active' ? '🟢 Active' : '🔴 Inactive'}
-                      </button>
+                      {m.role === 'admin' ? (
+                        <span className="text-xs text-primary-700 font-bold">Admin</span>
+                      ) : (
+                        <button
+                          onClick={() => toggleStatus(m.id, m.status)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            m.status === 'active'
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                        >
+                          {m.status === 'active' ? '🟢 Active' : '🔴 Inactive'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
