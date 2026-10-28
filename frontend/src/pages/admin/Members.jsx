@@ -25,6 +25,19 @@ export default function Members() {
     }
   }
 
+  const handleRemoveMember = async (id, name) => {
+    if (!window.confirm(`⚠️ क्या आप वाकई "${name}" को कमिटी से हटाना (Remove) चाहते हैं?\n\nसावधानी: इस सदस्य का सारा पेमेंट रिकॉर्ड और प्रोफाइल हमेशा के लिए हटा दिया जाएगा!`)) {
+      return
+    }
+    try {
+      const res = await api.delete(`/members/${id}`)
+      toast.success(res.data?.message || `${name} को हटा दिया गया।`)
+      fetchMembers()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'सदस्य को हटाने में त्रुटि आई।')
+    }
+  }
+
   if (loading) return (
     <div className="flex justify-center items-center h-64">
       <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
@@ -106,7 +119,7 @@ export default function Members() {
                   <th className="py-3 px-3 text-right text-red-700">कुल उठाया (Debit)</th>
                   <th className="py-3 px-3 text-right font-bold">नेट बैलेंस</th>
                   <th className="py-3 px-3 text-center">कमेटी स्थिति</th>
-                  <th className="py-3 px-3 text-center">Status</th>
+                  <th className="py-3 px-3 text-center">एक्शन (Actions)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -157,18 +170,31 @@ export default function Members() {
                     </td>
                     <td className="py-3.5 px-3 text-center">
                       {m.role === 'admin' ? (
-                        <span className="text-xs text-primary-700 font-bold">Admin</span>
+                        <span className="inline-block text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-lg">
+                          Admin 🛡️
+                        </span>
                       ) : (
-                        <button
-                          onClick={() => toggleStatus(m.id, m.status)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                            m.status === 'active'
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-red-100 text-red-700 hover:bg-red-200'
-                          }`}
-                        >
-                          {m.status === 'active' ? '🟢 Active' : '🔴 Inactive'}
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => toggleStatus(m.id, m.status)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                              m.status === 'active'
+                                ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                            }`}
+                            title="एक्टिव या इन-एक्टिव बदलें"
+                          >
+                            {m.status === 'active' ? '🟢 Active' : '⚪ Inactive'}
+                          </button>
+
+                          <button
+                            onClick={() => handleRemoveMember(m.id, m.name)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center gap-1 shadow-sm"
+                            title="कमिटी से मेम्बर हटाएं"
+                          >
+                            <span>🗑️</span> हटाएं
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

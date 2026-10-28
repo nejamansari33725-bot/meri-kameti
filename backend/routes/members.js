@@ -229,4 +229,34 @@ router.put('/:id/status', authMiddleware, adminOnly, (req, res) => {
   res.json({ message: `Member ${status === 'active' ? 'activate' : 'deactivate'} ho gaya.` });
 });
 
+// Remove / Delete member permanently (Admin only)
+router.delete('/:id', authMiddleware, adminOnly, (req, res) => {
+  const memberId = parseInt(req.params.id);
+  const member = db.prepare("SELECT id, name, phone, role FROM users WHERE id = ?").get(memberId);
+  if (!member) {
+    return res.status(404).json({ error: 'Member nahi mila.' });
+  }
+  if (member.role === 'admin') {
+    return res.status(400).json({ error: 'Admin account ko remove nahi kiya ja sakta.' });
+  }
+
+  // Delete all member payments and unlink from committee rounds, then delete user
+  const deleteTx = db.transaction(() => {
+    db.prepare('DELETE FROM payments WHERE user_id = ?').run(memberId);
+    db.prepare('UPDATE committee_rounds SET winner_user_id = NULL WHERE winner_user_id = ?').run(memberId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(memberId);
+  });
+
+  try {
+    deleteTx();
+    if (member.phone) {
+      notifyWhatsApp(member.phone, `Aapka account Mera Kameti se remove kar diya gaya hai.`);
+    }
+    res.json({ message: `${member.name} ko kameti se safaltapoorvak remove kar diya gaya. 🗑️` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Member remove karne me truti aayi: ' + err.message });
+  }
+});
+
 module.exports = router;
