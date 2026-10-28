@@ -1,7 +1,8 @@
-try { require('dotenv').config(); } catch(e) {}
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+
+try { require('dotenv').config(); } catch(e) {}
 
 const db = new Database(path.join(__dirname, '../kameti.db'));
 
@@ -42,12 +43,21 @@ db.exec(`
     year INTEGER NOT NULL,
     winner_user_id INTEGER,
     total_collected REAL DEFAULT 0,
+    payout_amount REAL DEFAULT 0,
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (winner_user_id) REFERENCES users(id)
   );
 `);
 
+// Add payout_amount column if table was created in an older version
+try {
+  db.exec(`ALTER TABLE committee_rounds ADD COLUMN payout_amount REAL DEFAULT 0;`);
+} catch (e) {
+  // Column already exists
+}
+
+// Seed admin user if not exists
 const adminExists = db.prepare("SELECT id FROM users WHERE phone = '0000000000'").get();
 if (!adminExists) {
   const hashedPassword = bcrypt.hashSync('admin123', 10);
