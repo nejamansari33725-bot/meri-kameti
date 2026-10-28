@@ -293,10 +293,12 @@ router.delete('/:id', authMiddleware, adminOnly, (req, res) => {
     return res.status(400).json({ error: 'Admin account ko remove nahi kiya ja sakta.' });
   }
 
-  // Delete all member payments and unlink from committee rounds, then delete user
+  // Delete all member dependencies safely inside a transaction
   const deleteTx = db.transaction(() => {
-    db.prepare('DELETE FROM payments WHERE user_id = ?').run(memberId);
-    db.prepare('UPDATE committee_rounds SET winner_user_id = NULL WHERE winner_user_id = ?').run(memberId);
+    try { db.prepare('DELETE FROM notifications WHERE user_id = ?').run(memberId); } catch(e){}
+    try { db.prepare('DELETE FROM payout_requests WHERE user_id = ?').run(memberId); } catch(e){}
+    try { db.prepare('DELETE FROM payments WHERE user_id = ?').run(memberId); } catch(e){}
+    try { db.prepare('UPDATE committee_rounds SET winner_user_id = NULL WHERE winner_user_id = ?').run(memberId); } catch(e){}
     db.prepare('DELETE FROM users WHERE id = ?').run(memberId);
   });
 
