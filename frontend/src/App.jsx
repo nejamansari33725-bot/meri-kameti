@@ -9,6 +9,7 @@ import Register from './pages/Register'
 import MemberDashboard from './pages/member/Dashboard'
 import SubmitPayment from './pages/member/SubmitPayment'
 import PaymentHistory from './pages/member/PaymentHistory'
+import KhataLedger from './pages/KhataLedger'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import Approvals from './pages/admin/Approvals'
 import Members from './pages/admin/Members'
@@ -30,9 +31,11 @@ function AppRoutes() {
           <Route path="/dashboard" element={<ProtectedRoute><MemberDashboard /></ProtectedRoute>} />
           <Route path="/pay" element={<ProtectedRoute><SubmitPayment /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
+          <Route path="/ledger" element={<ProtectedRoute><KhataLedger /></ProtectedRoute>} />
 
           {/* Admin routes */}
           <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/ledger" element={<ProtectedRoute adminOnly><KhataLedger /></ProtectedRoute>} />
           <Route path="/admin/approvals" element={<ProtectedRoute adminOnly><Approvals /></ProtectedRoute>} />
           <Route path="/admin/members" element={<ProtectedRoute adminOnly><Members /></ProtectedRoute>} />
           <Route path="/admin/committee" element={<ProtectedRoute adminOnly><CommitteeWinner /></ProtectedRoute>} />
