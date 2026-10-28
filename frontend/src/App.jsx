@@ -15,6 +15,7 @@ import Approvals from './pages/admin/Approvals'
 import Members from './pages/admin/Members'
 import CommitteeWinner from './pages/admin/CommitteeWinner'
 import Reports from './pages/admin/Reports'
+import AdminSettings from './pages/admin/AdminSettings'
 
 function AppRoutes() {
   const { user } = useAuth()
@@ -27,7 +28,7 @@ function AppRoutes() {
           <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} /> : <Login />} />
           <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
 
-          {/* Member routes */}
+          {/* Member & Shared routes */}
           <Route path="/dashboard" element={<ProtectedRoute><MemberDashboard /></ProtectedRoute>} />
           <Route path="/pay" element={<ProtectedRoute><SubmitPayment /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
@@ -40,6 +41,7 @@ function AppRoutes() {
           <Route path="/admin/members" element={<ProtectedRoute adminOnly><Members /></ProtectedRoute>} />
           <Route path="/admin/committee" element={<ProtectedRoute adminOnly><CommitteeWinner /></ProtectedRoute>} />
           <Route path="/admin/reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
+          <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>} />
 
           {/* Default redirect */}
           <Route path="/" element={
