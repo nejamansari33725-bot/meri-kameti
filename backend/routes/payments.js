@@ -27,13 +27,14 @@ const upload = multer({
   }
 });
 
-// Submit payment (member)
+// Submit payment (member or admin)
 router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
-  const { amount, reference_no, note, month, year } = req.body;
+  const { amount, reference_no, note, month, year, late_fine } = req.body;
   if (!amount || !month || !year) {
     return res.status(400).json({ error: 'Amount, month aur year zaroori hain.' });
   }
   const screenshotPath = req.file ? `/uploads/${req.file.filename}` : null;
+  const fine = late_fine && parseFloat(late_fine) > 0 ? parseFloat(late_fine) : 0;
 
   // Check if already submitted for this month
   const existing = db.prepare(
@@ -43,21 +44,42 @@ router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
     return res.status(400).json({ error: 'Is mahine ka payment pehle se submit hai.' });
   }
 
-  const result = db.prepare(`
-    INSERT INTO payments (user_id, amount, screenshot_path, reference_no, note, month, year)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(req.user.id, parseFloat(amount), screenshotPath, reference_no || null, note || null, parseInt(month), parseInt(year));
+  // If admin is submitting for themselves, they can still have it recorded
+  const initialStatus = req.user.role === 'admin' ? 'approved' : 'pending';
 
-  // Notify admin via WhatsApp placeholder
-  const admin = db.prepare("SELECT phone FROM users WHERE role = 'admin' LIMIT 1").get();
-  if (admin) {
-    notifyWhatsApp(admin.phone, `💰 Naya payment submit hua!\nMember: ${req.user.name}\nAmount: Rs. ${amount}\nMonth: ${month}/${year}\nRef: ${reference_no || 'N/A'}`);
+  const result = db.prepare(`
+    INSERT INTO payments (user_id, amount, late_fine, screenshot_path, reference_no, note, month, year, status, reviewed_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    req.user.id, 
+    parseFloat(amount), 
+    fine, 
+    screenshotPath, 
+    reference_no || null, 
+    note || null, 
+    parseInt(month), 
+    parseInt(year),
+    initialStatus,
+    initialStatus === 'approved' ? new Date().toISOString() : null
+  );
+
+  // Notify admin via WhatsApp if submitted by a member
+  if (req.user.role !== 'admin') {
+    const admin = db.prepare("SELECT phone FROM users WHERE role = 'admin' LIMIT 1").get();
+    if (admin) {
+      notifyWhatsApp(admin.phone, `💰 Naya payment submit hua!\nMember: ${req.user.name}\nAmount: Rs. ${amount}\nMonth: ${month}/${year}\nRef: ${reference_no || 'N/A'}`);
+    }
   }
 
-  res.json({ message: 'Payment submit ho gaya! Admin approve karega.', data: { id: result.lastInsertRowid } });
+  res.json({ 
+    message: initialStatus === 'approved' 
+      ? 'Payment successfully recorded & approved! ✅' 
+      : 'Payment submit ho gaya! Admin approve karega.', 
+    data: { id: result.lastInsertRowid } 
+  });
 });
 
-// Get my payments (member)
+// Get my payments (current user)
 router.get('/my', authMiddleware, (req, res) => {
   const payments = db.prepare(`
     SELECT * FROM payments WHERE user_id = ? ORDER BY submitted_at DESC
@@ -95,24 +117,29 @@ router.get('/all', authMiddleware, adminOnly, (req, res) => {
   res.json({ data: payments });
 });
 
-// Approve payment (admin)
+// Approve payment (with optional late fine & admin note)
 router.put('/:id/approve', authMiddleware, adminOnly, (req, res) => {
-  const { admin_note } = req.body;
+  const { admin_note, late_fine } = req.body;
   const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
   if (!payment) return res.status(404).json({ error: 'Payment nahi mila.' });
   if (payment.status !== 'pending') return res.status(400).json({ error: 'Yeh payment already review ho chuka hai.' });
 
+  const fine = late_fine && parseFloat(late_fine) > 0 ? parseFloat(late_fine) : 0;
+
   db.prepare(`
-    UPDATE payments SET status = 'approved', admin_note = ?, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?
-  `).run(admin_note || null, req.params.id);
+    UPDATE payments 
+    SET status = 'approved', admin_note = ?, late_fine = ?, reviewed_at = CURRENT_TIMESTAMP 
+    WHERE id = ?
+  `).run(admin_note || null, fine, req.params.id);
 
   // Notify member
   const member = db.prepare('SELECT name, phone FROM users WHERE id = ?').get(payment.user_id);
   if (member) {
-    notifyWhatsApp(member.phone, `✅ Aapka payment approve ho gaya!\nAmount: Rs. ${payment.amount}\nMonth: ${payment.month}/${payment.year}\n${admin_note ? 'Note: ' + admin_note : ''}\n- Mera Kameti`);
+    const fineMsg = fine > 0 ? `\nLate Fine: Rs. ${fine}` : '';
+    notifyWhatsApp(member.phone, `✅ Aapka payment approve ho gaya!\nAmount: Rs. ${payment.amount}${fineMsg}\nMonth: ${payment.month}/${payment.year}\n${admin_note ? 'Note: ' + admin_note : ''}\n- Mera Kameti`);
   }
 
-  res.json({ message: 'Payment approve ho gaya!' });
+  res.json({ message: 'Payment approve ho gaya! ✅' });
 });
 
 // Reject payment (admin)
@@ -133,6 +160,18 @@ router.put('/:id/reject', authMiddleware, adminOnly, (req, res) => {
   }
 
   res.json({ message: 'Payment reject ho gaya.' });
+});
+
+// Edit late fine directly on any payment (admin)
+router.put('/:id/late-fine', authMiddleware, adminOnly, (req, res) => {
+  const { late_fine, admin_note } = req.body;
+  const fine = late_fine !== undefined && parseFloat(late_fine) >= 0 ? parseFloat(late_fine) : 0;
+  db.prepare(`
+    UPDATE payments 
+    SET late_fine = ?, admin_note = COALESCE(?, admin_note)
+    WHERE id = ?
+  `).run(fine, admin_note || null, req.params.id);
+  res.json({ message: 'Late fine update ho gaya! ✅' });
 });
 
 module.exports = router;
