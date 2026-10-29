@@ -74,7 +74,7 @@ export default function KhataLedger() {
       </div>
 
       {/* Highlights: Total Credit, Total Late Fine, Total Debit, Net Balance */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* Total Credit */}
         <div className="card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
           <div className="flex items-center justify-between">
@@ -89,17 +89,31 @@ export default function KhataLedger() {
           </p>
         </div>
 
-        {/* Total Late Fine */}
+        {/* Total Late Fine Collected */}
         <div className="card bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">कुल लेट फाइन</span>
-            <span className="text-xl">⚠️</span>
+            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">लेट फाइन (जमा)</span>
+            <span className="text-xl">⚡</span>
           </div>
           <div className="text-2xl font-extrabold text-amber-700 mt-2">
             ₹ {summary.total_late_fine?.toLocaleString('en-IN') || 0}
           </div>
           <p className="text-[10px] text-amber-600 mt-1">
-            विलंब शुल्क से जमा राशि
+            वसूल किया गया लेट फाइन
+          </p>
+        </div>
+
+        {/* Total Late Fine Due (Unpaid) */}
+        <div className="card bg-gradient-to-br from-rose-50 to-orange-50 border-rose-200">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-rose-800 uppercase tracking-wider">लेट फाइन (बकाया Due)</span>
+            <span className="text-xl">⚠️</span>
+          </div>
+          <div className="text-2xl font-extrabold text-rose-700 mt-2">
+            ₹ {summary.total_late_fine_due?.toLocaleString('en-IN') || 0}
+          </div>
+          <p className="text-[10px] text-rose-600 mt-1">
+            सदस्यों पर कुल बाकी जुर्माना
           </p>
         </div>
 
@@ -205,7 +219,8 @@ export default function KhataLedger() {
                     <th className="py-3 px-3">सदस्य का नाम</th>
                     <th className="py-3 px-3">मोबाइल</th>
                     <th className="py-3 px-3 text-right text-green-700 font-bold">कुल जमा (Credit)</th>
-                    <th className="py-3 px-3 text-right text-amber-700 font-bold">लेट फाइन</th>
+                    <th className="py-3 px-3 text-right text-amber-700 font-bold">लेट फाइन (जमा)</th>
+                    <th className="py-3 px-3 text-right text-rose-700 font-bold">लेट फाइन (बकाया Due)</th>
                     <th className="py-3 px-3 text-right text-red-700 font-bold">कुल उठाया (Debit)</th>
                     <th className="py-3 px-3 text-right font-bold">नेट बैलेंस (Net)</th>
                     <th className="py-3 px-3 text-center">कमेटी स्थिति</th>
@@ -236,6 +251,15 @@ export default function KhataLedger() {
                       </td>
                       <td className="py-3.5 px-3 text-right font-bold text-amber-700">
                         {m.total_late_fine > 0 ? `₹ ${m.total_late_fine.toLocaleString('en-IN')}` : '—'}
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-bold">
+                        {m.late_fine_due > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-300 shadow-sm animate-pulse">
+                            <span>⚠️</span> ₹{m.late_fine_due.toLocaleString('en-IN')} Due
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">₹0 (कोई बकाया नहीं)</span>
+                        )}
                       </td>
                       <td className="py-3.5 px-3 text-right font-bold text-red-600">
                         ₹ {m.total_debit?.toLocaleString('en-IN')}
@@ -350,26 +374,45 @@ export default function KhataLedger() {
             ) : statement ? (
               <div className="space-y-4">
                 {/* Statement Summary */}
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   <div className="p-2.5 bg-green-50 rounded-xl border border-green-200 text-center">
                     <span className="text-[10px] text-green-700 font-semibold uppercase block">कुल जमा</span>
                     <span className="text-base font-bold text-green-700">₹ {statement.total_credit?.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-center">
-                    <span className="text-[10px] text-amber-700 font-semibold uppercase block">लेट फाइन</span>
+                    <span className="text-[10px] text-amber-700 font-semibold uppercase block">लेट फाइन (जमा)</span>
                     <span className="text-base font-bold text-amber-700">₹ {statement.total_late_fine?.toLocaleString('en-IN') || 0}</span>
+                  </div>
+                  <div className="p-2.5 bg-rose-50 rounded-xl border border-rose-200 text-center">
+                    <span className="text-[10px] text-rose-700 font-semibold uppercase block">लेट फाइन (बकाया Due)</span>
+                    <span className={`text-base font-bold ${statement.late_fine_due > 0 ? 'text-rose-700' : 'text-slate-400'}`}>
+                      ₹ {statement.late_fine_due?.toLocaleString('en-IN') || 0}
+                    </span>
                   </div>
                   <div className="p-2.5 bg-red-50 rounded-xl border border-red-200 text-center">
                     <span className="text-[10px] text-red-700 font-semibold uppercase block">कुल उठाया</span>
                     <span className="text-base font-bold text-red-700">₹ {statement.total_debit?.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 text-center">
+                  <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 text-center col-span-2 sm:col-span-1">
                     <span className="text-[10px] text-indigo-700 font-semibold uppercase block">बाकी शेष</span>
                     <span className={`text-base font-bold ${statement.net_balance >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>
                       ₹ {statement.net_balance?.toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
+
+                {/* Active Late Fine Due Notice in Modal */}
+                {statement.late_fine_due > 0 && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">⚠️</span>
+                      <div>
+                        <strong className="text-rose-900">लेट फाइन बकाया (Late Fine Due): ₹{statement.late_fine_due}</strong>
+                        <p className="text-[11px] text-rose-700">इस सदस्य के खाते में जुर्माना बकाया है। भुगतान होने पर यह स्वतः समाप्त हो जाएगा।</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Committee Payouts Won */}
                 {statement.roundsWon && statement.roundsWon.length > 0 && (

@@ -204,7 +204,8 @@ export default function Members() {
                   <th className="py-3 px-3">मेम्बर का नाम</th>
                   <th className="py-3 px-3">मोबाइल</th>
                   <th className="py-3 px-3 text-right text-green-700">कुल जमा (Credit)</th>
-                  <th className="py-3 px-3 text-right text-amber-700">लेट फाइन</th>
+                  <th className="py-3 px-3 text-right text-amber-700">लेट फाइन (जमा)</th>
+                  <th className="py-3 px-3 text-right text-rose-700">लेट फाइन (बकाया Due)</th>
                   <th className="py-3 px-3 text-right text-red-700">कुल उठाया (Debit)</th>
                   <th className="py-3 px-3 text-right font-bold">नेट बैलेंस</th>
                   <th className="py-3 px-3 text-center">कमेटी स्थिति</th>
@@ -240,6 +241,15 @@ export default function Members() {
                     </td>
                     <td className="py-3.5 px-3 text-right font-bold text-amber-700">
                       {m.total_late_fine > 0 ? `₹ ${m.total_late_fine.toLocaleString('en-IN')}` : '—'}
+                    </td>
+                    <td className="py-3.5 px-3 text-right">
+                      {m.late_fine_due > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-300 shadow-sm animate-pulse">
+                          <span>⚠️</span> ₹{m.late_fine_due.toLocaleString('en-IN')} Due
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">₹0 (कोई बकाया नहीं)</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-3 text-right font-bold text-red-600">
                       ₹ {m.total_debit?.toLocaleString('en-IN')}
@@ -288,7 +298,7 @@ export default function Members() {
                         {/* 2. Impose late fine button */}
                         <button
                           onClick={() => {
-                            setFineModal({ memberId: m.id, memberName: m.name, phone: m.phone })
+                            setFineModal({ memberId: m.id, memberName: m.name, phone: m.phone, currentDue: m.late_fine_due || 0 })
                             setFineAmount('')
                             setFineReason('')
                           }}
@@ -477,7 +487,12 @@ export default function Members() {
                 <h2 className="text-xl font-black text-gray-900 mt-2">
                   {fineModal.memberName}
                 </h2>
-                <p className="text-xs text-gray-500 font-mono">📱 {fineModal.phone}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-xs text-gray-500 font-mono">📱 {fineModal.phone}</p>
+                  <span className="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                    वर्तमान बकाया: ₹{fineModal.currentDue || 0}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
@@ -549,8 +564,8 @@ export default function Members() {
                 />
               </div>
 
-              <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-800">
-                💡 यह फाइन सदस्य के खाते में तुरंत जुड़ जाएगा और सदस्य को भी अपनी पेमेंट स्क्रीन पर दिखेगा।
+              <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
+                💡 <strong>नियम:</strong> यह लेट फाइन सदस्य की ID पर <strong>Due (बकाया)</strong> के रूप में जुड़ेगा और कमिटी के सभी सदस्य इसे खाता-बही में देख सकते हैं। जब सदस्य इसे Pay (भुगतान) में जमा करेंगे और आप अप्रूव करेंगे, तो यह बकाया स्वतः समाप्त (0) हो जाएगा।
               </div>
 
               <div className="flex gap-2 pt-2">

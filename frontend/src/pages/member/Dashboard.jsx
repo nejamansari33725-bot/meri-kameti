@@ -88,24 +88,32 @@ export default function MemberDashboard() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
       
-      {/* Late Fine In-App Notification Alert Banner */}
-      {lateFineNotifs.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 p-4 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-amber-300 animate-fadeIn">
+      {/* Active Late Fine Due Alert Banner */}
+      {(myStatement?.late_fine_due > 0 || lateFineNotifs.length > 0) && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-600 via-amber-600 to-orange-600 p-4 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-amber-300 animate-fadeIn">
           <div className="flex items-center gap-3">
-            <span className="text-3xl animate-bounce shrink-0">⚡</span>
+            <span className="text-3xl animate-bounce shrink-0">⚠️</span>
             <div>
-              <div className="inline-flex items-center gap-1.5 bg-black/20 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1">
-                LATE FINE NOTICE / लेट फाइन सूचना
+              <div className="inline-flex items-center gap-1.5 bg-black/30 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mb-1">
+                LATE FINE DUE / लेट फाइन बकाया
               </div>
-              <h4 className="font-extrabold text-sm sm:text-base">{lateFineNotifs[0].title}</h4>
-              <p className="text-xs text-amber-100 mt-0.5">{lateFineNotifs[0].message}</p>
+              <h4 className="font-extrabold text-sm sm:text-base">
+                {myStatement?.late_fine_due > 0 
+                  ? `आपके खाते में ₹${myStatement.late_fine_due} का लेट फाइन बकाया है!` 
+                  : lateFineNotifs[0].title}
+              </h4>
+              <p className="text-xs text-amber-100 mt-0.5">
+                {myStatement?.late_fine_due > 0 
+                  ? 'कृपया पेमेंट पेज (Pay) पर जाकर इसे जमा करें। एडमिन द्वारा स्वीकृत होने पर यह बकाया स्वतः समाप्त (0) हो जाएगा।' 
+                  : lateFineNotifs[0].message}
+              </p>
             </div>
           </div>
           <Link
             to="/pay"
-            className="bg-white text-amber-950 hover:bg-amber-50 px-4 py-2 rounded-xl text-xs font-black shadow-md transition-all shrink-0"
+            className="bg-white text-rose-950 hover:bg-rose-50 px-4 py-2 rounded-xl text-xs font-black shadow-md transition-all shrink-0 flex items-center gap-1"
           >
-            💳 लेट फाइन जमा करें / Pay Now →
+            💳 लेट फाइन जमा करें (Pay Due) →
           </Link>
         </div>
       )}
@@ -264,21 +272,41 @@ export default function MemberDashboard() {
             </div>
 
             {/* Late Fine Card */}
-            <div className="p-4 bg-gradient-to-br from-amber-500/10 via-amber-50 to-orange-50 rounded-2xl border border-amber-200 shadow-sm">
+            <div className={`p-4 rounded-2xl border shadow-sm ${
+              myStatement.late_fine_due > 0 
+                ? 'bg-gradient-to-br from-rose-500/10 via-amber-50 to-rose-50 border-rose-300' 
+                : 'bg-gradient-to-br from-amber-500/10 via-amber-50 to-orange-50 border-amber-200'
+            }`}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">लेट फाइन / Late Fine</span>
-                <span className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">⚡</span>
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm ${
+                  myStatement.late_fine_due > 0 ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {myStatement.late_fine_due > 0 ? '⚠️' : '⚡'}
+                </span>
               </div>
-              <p className="text-2xl font-black text-amber-700 mt-2">
-                ₹ {myStatement.total_late_fine?.toLocaleString('en-IN') || 0}
-              </p>
-              <p className="text-[11px] text-amber-600 mt-1 font-medium">
-                {myStatement.total_late_fine > 0 ? (
-                  <Link to="/pay" className="underline font-bold text-amber-800 hover:text-amber-950">
-                    अभी जमा करें / Pay →
+              <div className="mt-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-rose-700">
+                    ₹ {myStatement.late_fine_due?.toLocaleString('en-IN') || 0}
+                  </span>
+                  <span className="text-[10px] uppercase font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">
+                    बकाया (Due)
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  कुल जमा फाइन: ₹{myStatement.total_late_fine?.toLocaleString('en-IN') || 0}
+                </p>
+              </div>
+              <div className="mt-2 pt-2 border-t border-amber-200/60">
+                {myStatement.late_fine_due > 0 ? (
+                  <Link to="/pay" className="inline-flex items-center gap-1 text-xs font-black text-rose-700 hover:text-rose-900 bg-rose-100/70 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition-colors">
+                    <span>💳</span> अभी जमा करें / Pay Due →
                   </Link>
-                ) : 'कोई जुर्माना नहीं'}
-              </p>
+                ) : (
+                  <span className="text-[11px] text-emerald-600 font-semibold">✓ कोई जुर्माना बकाया नहीं</span>
+                )}
+              </div>
             </div>
 
             {/* Net Balance Card */}

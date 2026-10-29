@@ -50,7 +50,15 @@ export default function SubmitPayment() {
       }
     }).then(stmtRes => {
       if (stmtRes?.data?.data) {
-        setMyStatement(stmtRes.data.data)
+        const data = stmtRes.data.data
+        setMyStatement(data)
+        // If member has active late fine due, automatically populate the late fine field
+        if (data.late_fine_due > 0) {
+          setForm(prev => ({
+            ...prev,
+            late_fine: data.late_fine_due.toString()
+          }))
+        }
       }
     }).catch(err => console.error(err))
   }, [])
@@ -199,15 +207,24 @@ export default function SubmitPayment() {
               <p className="text-[10px] text-slate-300 mt-0.5">स्वीकृत किश्तें</p>
             </div>
 
-            {/* 3. Late Fine */}
-            <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
-              <span className="text-[11px] text-amber-300 font-bold uppercase block">
-                ⚡ लेट फाइन / Late Fine
+            {/* 3. Late Fine Due & Paid */}
+            <div className={`p-3 rounded-2xl border backdrop-blur-sm ${
+              myStatement.late_fine_due > 0 ? 'bg-rose-500/20 border-rose-400/40' : 'bg-white/10 border-white/10'
+            }`}>
+              <span className="text-[11px] text-amber-300 font-bold uppercase block flex items-center justify-between">
+                <span>⚡ लेट फाइन बकाया / Due</span>
+                {myStatement.late_fine_due > 0 && (
+                  <span className="text-[9px] bg-rose-500 text-white font-black px-1.5 py-0.2 rounded uppercase animate-pulse">
+                    DUE
+                  </span>
+                )}
               </span>
               <p className="text-lg sm:text-xl font-black text-white mt-1">
-                ₹ {myStatement.total_late_fine?.toLocaleString('en-IN') || 0}
+                ₹ {myStatement.late_fine_due?.toLocaleString('en-IN') || 0}
               </p>
-              <p className="text-[10px] text-slate-300 mt-0.5">जुर्माना राशि</p>
+              <p className="text-[10px] text-slate-300 mt-0.5">
+                कुल जमा फाइन: ₹{myStatement.total_late_fine?.toLocaleString('en-IN') || 0}
+              </p>
             </div>
 
             {/* 4. Net Khata */}
@@ -282,6 +299,30 @@ export default function SubmitPayment() {
             </div>
           )}
 
+          {/* Active Late Fine Due Alert Banner */}
+          {myStatement?.late_fine_due > 0 && (
+            <div className="p-3.5 bg-gradient-to-r from-rose-50 via-amber-50 to-orange-50 border border-rose-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl animate-bounce">⚠️</span>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-rose-900">
+                    आपके खाते में ₹{myStatement.late_fine_due} का लेट फाइन बकाया है! (Late Fine Due)
+                  </h4>
+                  <p className="text-[11px] text-rose-700 mt-0.5">
+                    यह राशि नीचे लेट फाइन में भरी गई है। इसे जमा करें, एडमिन द्वारा स्वीकृत होने पर यह बकाया समाप्त (0) हो जाएगा।
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForm(prev => ({ ...prev, late_fine: myStatement.late_fine_due.toString() }))}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shrink-0 transition-colors shadow-sm"
+              >
+                ₹{myStatement.late_fine_due} भरें
+              </button>
+            </div>
+          )}
+
           {/* 1. Installment Amount & Late Fine Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200">
             <div>
@@ -303,20 +344,32 @@ export default function SubmitPayment() {
               </p>
             </div>
 
-            <div>
+            <div className={`p-2 rounded-xl transition-colors ${
+              myStatement?.late_fine_due > 0 ? 'bg-amber-100/60 border border-amber-300' : ''
+            }`}>
               <label className="block text-xs font-bold text-amber-800 uppercase mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1">⚡ लेट फाइन / Late Fine (₹)</span>
-                <span className="text-[10px] text-amber-700 font-normal">जितनी बार चाहें</span>
+                {myStatement?.late_fine_due > 0 ? (
+                  <span className="text-[10px] text-rose-700 font-black bg-rose-100 px-2 py-0.5 rounded-full border border-rose-200">
+                    बकाया: ₹{myStatement.late_fine_due}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-amber-700 font-normal">जितनी बार चाहें</span>
+                )}
               </label>
               <input
                 type="number"
                 className="input font-bold text-amber-900 text-lg bg-white"
-                placeholder="e.g. 0, 50, 100"
+                placeholder={myStatement?.late_fine_due > 0 ? `बकाया ₹${myStatement.late_fine_due}` : "e.g. 0, 50, 100"}
                 min="0"
                 value={form.late_fine}
                 onChange={e => setForm({ ...form, late_fine: e.target.value })}
               />
-              <p className="text-[11px] text-slate-500 mt-1">यदि लेट फीस लगी हो (Can pay anytime)</p>
+              <p className="text-[11px] text-slate-600 mt-1">
+                {myStatement?.late_fine_due > 0 
+                  ? '💡 जमा करने पर एडमिन के अप्रूव करते ही यह बकाया खत्म (0) हो जाएगा।' 
+                  : 'यदि लेट फीस लगी हो (Can pay anytime)'}
+              </p>
             </div>
           </div>
 

@@ -86,6 +86,27 @@ try {
 try {
   db.exec(`ALTER TABLE users ADD COLUMN custom_late_fine REAL DEFAULT NULL;`);
 } catch (e) {}
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN custom_late_fine_due REAL DEFAULT NULL;`);
+} catch (e) {}
+
+// Create late_fines table to track active unpaid dues vs settled fines
+db.exec(`
+  CREATE TABLE IF NOT EXISTS late_fines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    month INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    reason TEXT,
+    status TEXT DEFAULT 'unpaid',
+    payment_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    paid_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (payment_id) REFERENCES payments(id)
+  );
+`);
 
 // Create payout_requests table for members to apply for committee payout / bid
 db.exec(`
@@ -137,14 +158,18 @@ try {
 } catch (e) {}
 
 // Seed admin user if not exists
-const adminExists = db.prepare("SELECT id FROM users WHERE phone = '0000000000'").get();
-if (!adminExists) {
-  const hashedPassword = bcrypt.hashSync('admin123', 10);
-  db.prepare(`
-    INSERT INTO users (name, phone, password, role)
-    VALUES ('Admin', '0000000000', ?, 'admin')
-  `).run(hashedPassword);
-  console.log('✅ Admin user created: phone=0000000000, password=admin123');
+try {
+  const adminExists = db.prepare("SELECT id FROM users WHERE phone = '0000000000'").get();
+  if (!adminExists) {
+    const hashedPassword = bcrypt.hashSync('admin123', 10);
+    db.prepare(`
+      INSERT INTO users (name, phone, password, role, status)
+      VALUES ('Admin', '0000000000', ?, 'admin', 'active')
+    `).run(hashedPassword);
+    console.log('✅ Admin user created: phone=0000000000, password=admin123');
+  }
+} catch (e) {
+  console.error('Admin seed error:', e);
 }
 
 module.exports = db;

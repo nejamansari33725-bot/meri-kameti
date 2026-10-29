@@ -6,6 +6,51 @@ const db = require('../database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { notifyWhatsApp } = require('../utils/whatsapp');
 
+// Helper to settle unpaid late fines for a member when a payment with late fine is approved
+function settleMemberLateFines(userId, paymentId, fineAmount, month, year) {
+  if (!fineAmount || fineAmount <= 0) return;
+  try {
+    const unpaidFines = db.prepare(`
+      SELECT id, amount FROM late_fines
+      WHERE user_id = ? AND status = 'unpaid'
+      ORDER BY id ASC
+    `).all(userId);
+
+    let remaining = fineAmount;
+    for (const uf of unpaidFines) {
+      if (remaining <= 0) break;
+      if (uf.amount <= remaining) {
+        db.prepare(`
+          UPDATE late_fines 
+          SET status = 'paid', payment_id = ?, paid_at = CURRENT_TIMESTAMP 
+          WHERE id = ?
+        `).run(paymentId, uf.id);
+        remaining -= uf.amount;
+      } else {
+        // Partially paid: mark current as paid for paid portion, insert unpaid for rest
+        db.prepare(`
+          UPDATE late_fines 
+          SET amount = ?, status = 'paid', payment_id = ?, paid_at = CURRENT_TIMESTAMP 
+          WHERE id = ?
+        `).run(remaining, paymentId, uf.id);
+
+        db.prepare(`
+          INSERT INTO late_fines (user_id, amount, month, year, reason, status, created_at)
+          VALUES (?, ?, ?, ?, ?, 'unpaid', CURRENT_TIMESTAMP)
+        `).run(userId, uf.amount - remaining, month, year, 'Remaining unpaid fine balance');
+
+        remaining = 0;
+      }
+    }
+
+    // Also deduct from custom_late_fine_due if set
+    db.prepare('UPDATE users SET custom_late_fine_due = MAX(0, custom_late_fine_due - ?) WHERE id = ? AND custom_late_fine_due IS NOT NULL')
+      .run(fineAmount, userId);
+  } catch (err) {
+    console.error('Error settling late fine:', err);
+  }
+}
+
 // Multer setup for screenshot uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
@@ -106,6 +151,11 @@ router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
     paymentId = result.lastInsertRowid;
   }
 
+  // If approved immediately (e.g. admin action) and late fine is included, settle unpaid dues
+  if (initialStatus === 'approved' && fine > 0) {
+    settleMemberLateFines(req.user.id, paymentId, fine, parseInt(month), parseInt(year));
+  }
+
   // Notify admin via WhatsApp if submitted by a member
   if (req.user.role !== 'admin') {
     const admin = db.prepare("SELECT phone FROM users WHERE role = 'admin' LIMIT 1").get();
@@ -171,13 +221,21 @@ router.put('/:id/approve', authMiddleware, adminOnly, (req, res) => {
   if (!payment) return res.status(404).json({ error: 'Payment nahi mila.' });
   if (payment.status !== 'pending') return res.status(400).json({ error: 'Yeh payment already review ho chuka hai.' });
 
-  const fine = late_fine && parseFloat(late_fine) > 0 ? parseFloat(late_fine) : 0;
+  // Use explicitly passed late_fine, or fallback to the late_fine submitted with payment
+  const fine = (late_fine !== undefined && late_fine !== null && parseFloat(late_fine) > 0)
+    ? parseFloat(late_fine)
+    : (payment.late_fine && parseFloat(payment.late_fine) > 0 ? parseFloat(payment.late_fine) : 0);
 
   db.prepare(`
     UPDATE payments 
     SET status = 'approved', admin_note = ?, late_fine = ?, reviewed_at = CURRENT_TIMESTAMP 
     WHERE id = ?
   `).run(admin_note || null, fine, req.params.id);
+
+  // Settle member's unpaid late fines if fine was paid/approved
+  if (fine > 0) {
+    settleMemberLateFines(payment.user_id, payment.id, fine, payment.month, payment.year);
+  }
 
   // If member has custom ledger baseline, update it with newly approved amounts
   if (payment.amount > 0) {
