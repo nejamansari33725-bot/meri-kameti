@@ -6,6 +6,8 @@ if (fs.existsSync('/app/data')) {
   baseDir = '/app/data';
 } else if (process.env.DATABASE_DIR && fs.existsSync(process.env.DATABASE_DIR)) {
   baseDir = process.env.DATABASE_DIR;
+} else if (process.env.VERCEL) {
+  baseDir = '/tmp';
 }
 
 const dbPath = path.join(baseDir, 'kameti.db');

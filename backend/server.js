@@ -36,12 +36,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Mera Kameti chal raha hai! 🟢' });
 });
 
-// Serve React frontend build (production)
-const frontendBuild = path.join(__dirname, '../frontend/dist');
-app.use(express.static(frontendBuild));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendBuild, 'index.html'));
-});
+// Serve React frontend build (production for standalone node servers like Railway/Render)
+if (!process.env.VERCEL) {
+  const frontendBuild = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendBuild));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendBuild, 'index.html'));
+  });
+}
 
 // Error handler
 app.use((err, req, res, next) => {

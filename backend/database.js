@@ -7,8 +7,12 @@ try { require('dotenv').config(); } catch(e) {}
 
 const db = new Database(dbPath);
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+if (process.env.VERCEL) {
+  try { db.pragma('journal_mode = DELETE'); } catch (e) {}
+} else {
+  try { db.pragma('journal_mode = WAL'); } catch (e) {}
+}
+try { db.pragma('foreign_keys = ON'); } catch (e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
