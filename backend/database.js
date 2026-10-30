@@ -170,11 +170,11 @@ try {
 // Sole Admin is 8434776690 (MD NEJAM ANSARI)
 try {
   const admin8434 = db.prepare("SELECT id FROM users WHERE phone = '8434776690'").get();
+  const hashedAdminPass = bcrypt.hashSync('admin123', 10);
   if (admin8434) {
-    db.prepare("UPDATE users SET name = 'MD NEJAM ANSARI', role = 'admin', status = 'active' WHERE phone = '8434776690'").run();
+    db.prepare("UPDATE users SET name = 'MD NEJAM ANSARI', role = 'admin', status = 'active', password = ? WHERE phone = '8434776690'").run(hashedAdminPass);
   } else {
-    const hashed = bcrypt.hashSync('admin123', 10);
-    db.prepare("INSERT INTO users (name, phone, password, role, status) VALUES ('MD NEJAM ANSARI', '8434776690', ?, 'admin', 'active')").run(hashed);
+    db.prepare("INSERT INTO users (name, phone, password, role, status) VALUES ('MD NEJAM ANSARI', '8434776690', ?, 'admin', 'active')").run(hashedAdminPass);
   }
 } catch (e) {}
 
