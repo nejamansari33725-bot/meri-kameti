@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import api from '../../api/axios'
+import api, { getImageUrl } from '../../api/axios'
 
 const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -500,7 +500,7 @@ export default function SubmitPayment() {
         <div className="flex justify-center">
           <div className="bg-white p-3 rounded-2xl shadow-md border border-emerald-100 max-w-[280px] w-full text-center">
             <img
-              src={paymentConfig.qr_code_url || '/upi-qr.png'}
+              src={getImageUrl(paymentConfig.qr_code_url) || '/upi-qr.png'}
               alt="UPI QR Code"
               className="w-full h-auto rounded-xl mx-auto object-contain"
             />

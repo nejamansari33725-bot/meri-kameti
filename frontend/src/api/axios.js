@@ -1,7 +1,17 @@
 import axios from 'axios'
 
+export const API_ORIGIN = (typeof window !== 'undefined' && window.location.hostname.includes('railway.app'))
+  ? ''
+  : (import.meta.env.VITE_API_URL || 'https://merakameti.up.railway.app')
+
+export const getImageUrl = (path) => {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  return `${API_ORIGIN}${path.startsWith('/') ? '' : '/'}${path}`
+}
+
 const api = axios.create({
-  baseURL: '/api'
+  baseURL: `${API_ORIGIN}/api`
 })
 
 api.interceptors.request.use((config) => {

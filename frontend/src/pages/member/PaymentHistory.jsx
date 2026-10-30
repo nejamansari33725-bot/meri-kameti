@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import api from '../../api/axios'
+import api, { getImageUrl } from '../../api/axios'
 
 const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -76,7 +76,7 @@ export default function PaymentHistory() {
                       <td className="py-3 px-3 text-center">
                         {p.screenshot_path ? (
                           <a
-                            href={p.screenshot_path}
+                            href={getImageUrl(p.screenshot_path)}
                             target="_blank"
                             rel="noreferrer"
                             className="text-emerald-600 hover:text-emerald-700 hover:underline font-bold text-xs"

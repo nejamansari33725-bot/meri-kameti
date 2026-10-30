@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import api from '../../api/axios'
+import api, { getImageUrl } from '../../api/axios'
 
 const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -210,7 +210,7 @@ export default function Approvals() {
       {selectedImg && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedImg(null)}>
           <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
-            <img src={selectedImg} alt="Payment screenshot" className="w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl bg-black" />
+            <img src={getImageUrl(selectedImg)} alt="Payment screenshot" className="w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl bg-black" />
             <button onClick={() => setSelectedImg(null)}
               className="absolute top-3 right-3 bg-white text-gray-800 rounded-full w-9 h-9 flex items-center justify-center font-bold hover:bg-gray-100 shadow-lg text-lg">
               ✕
