@@ -119,6 +119,46 @@ export default function AdminDashboard() {
     }
   }
 
+  const [downloading, setDownloading] = useState(false)
+
+  const handleDownloadJsonBackup = async () => {
+    setDownloading(true)
+    const toastId = toast.loading('डेटा बैकअप तैयार हो रहा है...')
+    try {
+      const res = await api.get('/reports/backup-data?download=true', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/json' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `mera-kameti-backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('डेटा सफलतापूर्वक डाउनलोड हो गया! 📥', { id: toastId })
+    } catch (err) {
+      toast.error('डाउनलोड विफल: ' + (err.response?.data?.error || err.message), { id: toastId })
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  const handleDownloadDbBackup = async () => {
+    setDownloading(true)
+    const toastId = toast.loading('डेटाबेस फ़ाइल (.db) तैयार हो रही है...')
+    try {
+      const res = await api.get('/reports/download-db', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `kameti-backup-${new Date().toISOString().slice(0, 10)}.db`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('डेटाबेस फ़ाइल (.db) डाउनलोड हो गई! 💾', { id: toastId })
+    } catch (err) {
+      toast.error('डेटाबेस डाउनलोड विफल: ' + (err.response?.data?.error || err.message), { id: toastId })
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   if (loading) return (
     <div className="flex justify-center items-center h-64">
       <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-600 border-t-transparent"></div>
@@ -555,6 +595,47 @@ export default function AdminDashboard() {
             <div className="text-xs font-bold text-slate-900 mt-2">सेटिंग्स</div>
             <span className="text-[10px] text-slate-600 font-medium">QR/Password</span>
           </Link>
+        </div>
+      </div>
+
+      {/* High Priority: Complete Data Safety & One-Click Download Center */}
+      <div className="card bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white border-2 border-emerald-500/40 p-5 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-2xl shrink-0">
+            🛡️
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-base text-white">
+                डेटा सुरक्षा व बैकअप (Data Safety & Download)
+              </h3>
+              <span className="bg-emerald-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                100% SAFE
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              सभी सदस्यों के फोन नंबर, पासवर्ड और पेमेंट्स का पूरा डेटा सुरक्षित है। कभी भी 1-क्लिक में डाउनलोड करें।
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+          <button
+            type="button"
+            onClick={handleDownloadJsonBackup}
+            disabled={downloading}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-1.5"
+          >
+            <span>📥</span> {downloading ? 'डाउनलोडिंग...' : 'डेटा डाउनलोड (JSON)'}
+          </button>
+          <button
+            type="button"
+            onClick={handleDownloadDbBackup}
+            disabled={downloading}
+            className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-600 transition-all flex items-center gap-1.5"
+          >
+            <span>💾</span> {downloading ? 'डाउनलोडिंग...' : 'डेटाबेस फ़ाइल (.db)'}
+          </button>
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 
 export default function AdminSettings() {
   const { user, login } = useAuth()
-  const [activeTab, setActiveTab] = useState('payment') // 'payment' | 'profile'
+  const [activeTab, setActiveTab] = useState('payment') // 'payment' | 'profile' | 'backup'
 
   // Payment & Committee Settings State
   const [settings, setSettings] = useState({
@@ -29,6 +29,83 @@ export default function AdminSettings() {
     confirm_password: ''
   })
   const [profileLoading, setProfileLoading] = useState(false)
+
+  // Backup & Data Export State
+  const [backupStats, setBackupStats] = useState(null)
+  const [backupLoading, setBackupLoading] = useState(false)
+  const [restoreFile, setRestoreFile] = useState(null)
+  const [restoreLoading, setRestoreLoading] = useState(false)
+
+  const loadBackupStats = () => {
+    api.get('/reports/backup-data')
+      .then(res => setBackupStats(res.data))
+      .catch(err => console.error('Backup stats error:', err))
+  }
+
+  const handleDownloadJson = async () => {
+    setBackupLoading(true)
+    const toastId = toast.loading('डेटा बैकअप तैयार हो रहा है...')
+    try {
+      const res = await api.get('/reports/backup-data?download=true', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/json' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `mera-kameti-backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('डेटा सफलतापूर्वक डाउनलोड हो गया! 📥', { id: toastId })
+    } catch (err) {
+      toast.error('डाउनलोड विफल: ' + (err.response?.data?.error || err.message), { id: toastId })
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
+  const handleDownloadDb = async () => {
+    setBackupLoading(true)
+    const toastId = toast.loading('डेटाबेस फ़ाइल तैयार हो रही है...')
+    try {
+      const res = await api.get('/reports/download-db', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `kameti-backup-${new Date().toISOString().slice(0, 10)}.db`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('डेटाबेस फाइल (.db) डाउनलोड हो गई! 💾', { id: toastId })
+    } catch (err) {
+      toast.error('डेटाबेस डाउनलोड विफल: ' + (err.response?.data?.error || err.message), { id: toastId })
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
+  const handleRestoreBackup = async (e) => {
+    e.preventDefault()
+    if (!restoreFile) return toast.error('कृपया पहले JSON बैकअप फ़ाइल चुनें!')
+    if (!window.confirm('⚠️ क्या आप निश्चित हैं? बैकअप फ़ाइल से डेटा रिस्टोर करने पर सभी रिकॉर्ड्स अपडेट/रिस्टोर हो जाएंगे।')) return
+
+    setRestoreLoading(true)
+    const toastId = toast.loading('डेटा रिस्टोर हो रहा है...')
+    try {
+      const text = await restoreFile.text()
+      const parsed = JSON.parse(text)
+      const res = await api.post('/reports/restore-data', { data: parsed.data || parsed })
+      toast.success(res.data?.message || 'डेटा रिस्टोर हो गया! ✅', { id: toastId })
+      setRestoreFile(null)
+      loadBackupStats()
+    } catch (err) {
+      toast.error('रिस्टोर विफल: ' + (err.response?.data?.error || err.message), { id: toastId })
+    } finally {
+      setRestoreLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'backup') {
+      loadBackupStats()
+    }
+  }, [activeTab])
 
   useEffect(() => {
     // Fetch settings
@@ -156,6 +233,16 @@ export default function AdminSettings() {
           }`}
         >
           <span>👤</span> Admin मोबाइल नंबर व पासवर्ड बदलें
+        </button>
+        <button
+          onClick={() => setActiveTab('backup')}
+          className={`py-2.5 px-4 font-bold text-sm rounded-t-xl transition-all border-b-2 flex items-center gap-2 ${
+            activeTab === 'backup'
+              ? 'border-emerald-600 text-emerald-700 bg-white shadow-sm'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <span>🛡️</span> डेटा डाउनलोड व बैकअप (Data Safety)
         </button>
       </div>
 
@@ -407,6 +494,138 @@ export default function AdminSettings() {
               {profileLoading ? '⏳ अपडेट हो रहा है...' : '🔒 लॉगिन डिटेल्स व पासवर्ड अपडेट करें'}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Tab 3: Data Safety, Backup & Download */}
+      {activeTab === 'backup' && (
+        <div className="space-y-6">
+          {/* Main Card */}
+          <div className="card border-2 border-emerald-300 bg-gradient-to-br from-emerald-50/50 via-teal-50/30 to-white space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-emerald-600/30">
+                  🛡️
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-black text-slate-900">
+                      डेटा सुरक्षा व सम्पूर्ण बैकअप (100% Data Safe)
+                    </h2>
+                    <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                      ZERO DATA LOSS
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    कमिटी का पूरा डेटा सुरक्षित है। कभी भी 1-क्लिक में अपने फोन या कंप्यूटर पर डाउनलोड करें।
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={loadBackupStats}
+                className="text-xs font-bold text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+              >
+                🔄 रिफ्रेश
+              </button>
+            </div>
+
+            {/* Live Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-center shadow-sm">
+                <div className="text-xl sm:text-2xl font-black text-slate-800">
+                  {backupStats?.counts?.users ?? '—'}
+                </div>
+                <div className="text-[11px] font-semibold text-slate-500 mt-0.5">👥 कुल सदस्य (Members)</div>
+              </div>
+
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-center shadow-sm">
+                <div className="text-xl sm:text-2xl font-black text-emerald-700">
+                  {backupStats?.counts?.payments ?? '—'}
+                </div>
+                <div className="text-[11px] font-semibold text-slate-500 mt-0.5">💰 कुल पेमेंट्स (Payments)</div>
+              </div>
+
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-center shadow-sm">
+                <div className="text-xl sm:text-2xl font-black text-amber-700">
+                  {backupStats?.counts?.committee_rounds ?? '—'}
+                </div>
+                <div className="text-[11px] font-semibold text-slate-500 mt-0.5">🏆 कमिटी राउंड्स (Rounds)</div>
+              </div>
+
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-center shadow-sm">
+                <div className="text-xl sm:text-2xl font-black text-indigo-700">
+                  {backupStats?.counts?.late_fines ?? '—'}
+                </div>
+                <div className="text-[11px] font-semibold text-slate-500 mt-0.5">⚡ लेट फाइन रिकॉर्ड्स</div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 border-t border-emerald-100 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={handleDownloadJson}
+                disabled={backupLoading}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                <span>📥</span>
+                {backupLoading ? 'डाउनलोडिंग...' : 'पूरा डेटा डाउनलोड करें (JSON)'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadDb}
+                disabled={backupLoading}
+                className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-3.5 px-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm border border-slate-700"
+              >
+                <span>💾</span>
+                {backupLoading ? 'डाउनलोडिंग...' : 'डेटाबेस फ़ाइल डाउनलोड (.db)'}
+              </button>
+            </div>
+
+            <div className="bg-emerald-100/60 rounded-xl p-3 border border-emerald-200 text-xs text-emerald-900 space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <span>💡</span> बैकअप में क्या-क्या शामिल है?
+              </div>
+              <ul className="list-disc list-inside space-y-0.5 text-slate-700 text-[11px]">
+                <li>सभी मेंबर्स के नाम, फोन नंबर व सुरक्षित एन्क्रिप्टेड पासवर्ड</li>
+                <li>सभी अप्रूव्ड व पेंडिंग पेमेंट्स व UTR रेफरेंस</li>
+                <li>लेट फाइन (Due व Paid) का पूरा हिसाब</li>
+                <li>कमिटी विनर और पेआउट राउंड्स</li>
+                <li>QR कोड व बैंक सेटिंग्स</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Restore / Import Card */}
+          <div className="card border border-slate-200 space-y-4">
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                <span>🔄</span> बैकअप से डेटा रिस्टोर करें (Restore Backup)
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                यदि कभी सर्वर बदलना हो या पुराना बैकअप वापस लाना हो, तो अपनी डाउनलोड की गई JSON फ़ाइल यहाँ अपलोड करें।
+              </p>
+            </div>
+
+            <form onSubmit={handleRestoreBackup} className="space-y-3">
+              <input
+                type="file"
+                accept=".json"
+                onChange={e => setRestoreFile(e.target.files[0])}
+                className="block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer border border-slate-200 rounded-xl p-1"
+              />
+
+              <button
+                type="submit"
+                disabled={!restoreFile || restoreLoading}
+                className="btn-secondary w-full py-2.5 text-xs font-bold text-slate-800"
+              >
+                {restoreLoading ? '⏳ रिस्टोर हो रहा है...' : '🔄 बैकअप फ़ाइल से डेटा रिस्टोर करें'}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

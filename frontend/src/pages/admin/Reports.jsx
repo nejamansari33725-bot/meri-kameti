@@ -12,6 +12,26 @@ export default function Reports() {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(false)
   const [pdfLoading, setPdfLoading] = useState(false)
+  const [backupLoading, setBackupLoading] = useState(false)
+
+  const downloadFullBackup = async () => {
+    setBackupLoading(true)
+    const toastId = toast.loading('कम्पलीट डेटा बैकअप तैयार हो रहा है...')
+    try {
+      const res = await api.get('/reports/backup-data?download=true', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/json' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `mera-kameti-full-backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      toast.success('पूरा डेटा बैकअप डाउनलोड हो गया! 📥', { id: toastId })
+    } catch (err) {
+      toast.error('डाउनलोड विफल: ' + (err.response?.data?.error || err.message), { id: toastId })
+    } finally {
+      setBackupLoading(false)
+    }
+  }
 
   const loadReport = async () => {
     setLoading(true)
@@ -70,6 +90,13 @@ export default function Reports() {
               {pdfLoading ? '⏳ डाउनलोडिंग...' : '📥 PDF डाउनलोड / Download'}
             </button>
           )}
+          <button
+            onClick={downloadFullBackup}
+            disabled={backupLoading}
+            className="btn-secondary border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+          >
+            {backupLoading ? '⏳ डाउनलोडिंग...' : '🛡️ डेटा बैकअप डाउनलोड / Backup Data'}
+          </button>
         </div>
       </div>
 
