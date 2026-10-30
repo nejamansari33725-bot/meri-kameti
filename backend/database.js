@@ -1,10 +1,11 @@
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const { dbPath } = require('./utils/storagePath');
 
 try { require('dotenv').config(); } catch(e) {}
 
-const db = new Database(path.join(__dirname, '../kameti.db'));
+const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');

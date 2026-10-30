@@ -51,9 +51,11 @@ function settleMemberLateFines(userId, paymentId, fineAmount, month, year) {
   }
 }
 
-// Multer setup for screenshot uploads
+const { uploadsDir } = require('../utils/storagePath');
+
+// Multer setup for screenshot uploads (stored on persistent cloud storage)
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `payment_${Date.now()}${ext}`);

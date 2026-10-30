@@ -192,8 +192,11 @@ router.get('/backup-data', allowAdminOrSecret, (req, res) => {
 // Download actual SQLite database file (.db)
 router.get('/download-db', allowAdminOrSecret, (req, res) => {
   try {
+    const { dbPath: persistentDbPath } = require('../utils/storagePath');
     const possiblePaths = [
+      persistentDbPath,
       db.name,
+      '/app/data/kameti.db',
       path.join(__dirname, '../kameti.db'),
       path.join(__dirname, '../../kameti.db'),
       path.join(process.cwd(), 'kameti.db')

@@ -4,10 +4,11 @@ const multer = require('multer');
 const path = require('path');
 const db = require('../database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { uploadsDir } = require('../utils/storagePath');
 
-// Multer for QR code uploads
+// Multer for QR code uploads (stored on persistent cloud volume)
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `qr_${Date.now()}${ext}`);

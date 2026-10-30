@@ -16,7 +16,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded screenshots & QR codes
+const { uploadsDir } = require('./utils/storagePath');
+
+// Serve uploaded screenshots & QR codes (both persistent cloud volume and local fallback)
+app.use('/uploads', express.static(uploadsDir));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
