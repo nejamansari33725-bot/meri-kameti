@@ -201,4 +201,13 @@ defaultUsers.forEach(u => {
   }
 });
 
+// Clean up any stale late_fine notifications for members who have 0 unpaid late fines
+try {
+  db.exec(`
+    DELETE FROM notifications 
+    WHERE type = 'late_fine' 
+      AND user_id NOT IN (SELECT DISTINCT user_id FROM late_fines WHERE status = 'unpaid');
+  `);
+} catch (e) {}
+
 module.exports = db;

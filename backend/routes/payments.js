@@ -46,6 +46,12 @@ function settleMemberLateFines(userId, paymentId, fineAmount, month, year) {
     // Also deduct from custom_late_fine_due if set
     db.prepare('UPDATE users SET custom_late_fine_due = MAX(0, custom_late_fine_due - ?) WHERE id = ? AND custom_late_fine_due IS NOT NULL')
       .run(fineAmount, userId);
+
+    // If all late fines are settled, clear stale late fine notifications for this member
+    const remainingDue = db.prepare("SELECT COUNT(*) as cnt FROM late_fines WHERE user_id = ? AND status = 'unpaid'").get(userId);
+    if (!remainingDue || remainingDue.cnt === 0) {
+      db.prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'late_fine'").run(userId);
+    }
   } catch (err) {
     console.error('Error settling late fine:', err);
   }

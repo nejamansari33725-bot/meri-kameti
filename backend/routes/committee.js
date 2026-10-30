@@ -120,13 +120,7 @@ router.post('/rounds', authMiddleware, adminOnly, (req, res) => {
     `).run(parseInt(month), parseInt(year), parseInt(winner_user_id), totalCollected.total, actualPayout, notes || null);
   }
 
-  // Notify winner
   const winner = db.prepare('SELECT name, phone FROM users WHERE id = ?').get(parseInt(winner_user_id));
-  const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'];
-  if (winner) {
-    notifyWhatsApp(winner.phone, `🎉 Mubarak ho ${winner.name}!\nAap is mahine (${monthNames[month]} ${year}) ki committee jeet gaye hain!\nUthayi hui raashi: Rs. ${actualPayout}\n- Mera Kameti`);
-  }
 
   res.json({ message: `${winner?.name} ko winner set kar diya gaya! (Rs. ${actualPayout})` });
 });

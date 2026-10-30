@@ -88,8 +88,8 @@ export default function MemberDashboard() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
       
-      {/* Active Late Fine Due Alert Banner */}
-      {(myStatement?.late_fine_due > 0 || lateFineNotifs.length > 0) && (
+      {/* Active Late Fine Due Alert Banner - ONLY SHOWS WHEN MEMBER ACTUALLY HAS LATE FINE DUE > 0 */}
+      {Boolean(myStatement?.late_fine_due > 0) && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-600 via-amber-600 to-orange-600 p-4 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-amber-300 animate-fadeIn">
           <div className="flex items-center gap-3">
             <span className="text-3xl animate-bounce shrink-0">⚠️</span>
@@ -98,14 +98,13 @@ export default function MemberDashboard() {
                 LATE FINE DUE / लेट फाइन बकाया
               </div>
               <h4 className="font-extrabold text-sm sm:text-base">
-                {myStatement?.late_fine_due > 0 
-                  ? `आपके खाते में ₹${myStatement.late_fine_due} का लेट फाइन बकाया है!` 
-                  : lateFineNotifs[0].title}
+                एडमिन द्वारा ₹{myStatement.late_fine_due} का लेट फाइन लगाया गया है!
               </h4>
               <p className="text-xs text-amber-100 mt-0.5">
-                {myStatement?.late_fine_due > 0 
-                  ? 'कृपया पेमेंट पेज (Pay) पर जाकर इसे जमा करें। एडमिन द्वारा स्वीकृत होने पर यह बकाया स्वतः समाप्त (0) हो जाएगा।' 
-                  : lateFineNotifs[0].message}
+                {myStatement?.unpaid_fines?.[0]?.reason 
+                  ? `नोट / कारण: "${myStatement.unpaid_fines[0].reason}"` 
+                  : 'एडमिन द्वारा लेट फाइन दर्ज किया गया है।'}
+                {' '}कृपया Pay पेज पर जाकर इसे जमा करें।
               </p>
             </div>
           </div>

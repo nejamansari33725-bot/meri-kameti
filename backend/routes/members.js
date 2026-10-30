@@ -251,6 +251,13 @@ router.get('/:id/statement', authMiddleware, (req, res) => {
   const totalLateFine = member.custom_late_fine !== null ? member.custom_late_fine : calcLateFine;
   const totalLateFineDue = member.custom_late_fine_due !== null ? member.custom_late_fine_due : calcLateFineDue;
 
+  // If member has no unpaid late fine, clear any stale late_fine alerts
+  if (totalLateFineDue === 0) {
+    try {
+      db.prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'late_fine'").run(memberId);
+    } catch (e) {}
+  }
+
   res.json({
     data: {
       member,
@@ -398,7 +405,7 @@ router.post('/:id/late-fine', authMiddleware, adminOnly, (req, res) => {
 
   // Notify member via WhatsApp placeholder
   if (member.phone) {
-    notifyWhatsApp(member.phone, `⚠️ Mera Kameti Notice: Admin dwara aapke khate me Rs. ${fineAmount} ka Late Fine Due lagaya gaya hai (${MONTH_NAMES[m]} ${y}).\nKul Bakaya Late Fine: Rs. ${totalDue}\nKaran: ${reason || 'Kisht time par jama na karne par'}\nKripya Pay page par jakar ise jama karein: https://merakameti.up.railway.app/pay\n- Mera Kameti`);
+    notifyWhatsApp(member.phone, `⚠️ Mera Kameti Notice: Admin dwara aapke khate me Rs. ${fineAmount} ka Late Fine Due lagaya gaya hai (${MONTH_NAMES[m]} ${y}).\nKul Bakaya Late Fine: Rs. ${totalDue}\nKaran: ${reason || 'Kisht time par jama na karne par'}\nKripya Pay page par jakar ise jama karein: https://merakameti.vercel.app/pay\n- Mera Kameti`);
   }
 
   res.json({ 
