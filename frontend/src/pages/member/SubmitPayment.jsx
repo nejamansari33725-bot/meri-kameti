@@ -27,7 +27,8 @@ export default function SubmitPayment() {
   const [paymentConfig, setPaymentConfig] = useState({
     upi_id: 'ansarinizam57970-2@oksbi',
     upi_name: 'Nizam Ansari',
-    qr_code_url: '/upi-qr.png'
+    qr_code_url: '/upi-qr.png',
+    whatsapp_group_link: 'https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2'
   })
 
   useEffect(() => {
@@ -38,7 +39,8 @@ export default function SubmitPayment() {
           ...prev,
           upi_id: res.data.data.upi_id || prev.upi_id,
           upi_name: res.data.data.upi_name || prev.upi_name,
-          qr_code_url: res.data.data.qr_code_url || prev.qr_code_url
+          qr_code_url: res.data.data.qr_code_url || prev.qr_code_url,
+          whatsapp_group_link: res.data.data.whatsapp_group_link || prev.whatsapp_group_link
         }))
       }
     }).catch(err => console.error(err))
@@ -582,7 +584,7 @@ export default function SubmitPayment() {
           
           <div className="pt-1 border-t border-emerald-200/60">
             <a
-              href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
+              href={paymentConfig.whatsapp_group_link || 'https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2'}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-1.5 w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-sm"

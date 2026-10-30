@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import api from '../../api/axios'
+import api, { getImageUrl } from '../../api/axios'
 
 const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -13,6 +13,7 @@ export default function CommitteeWinner() {
   const [payoutRequests, setPayoutRequests] = useState([])
   const [allMembers, setAllMembers] = useState([])
   const [payoutInput, setPayoutInput] = useState('')
+  const [whatsappLink, setWhatsappLink] = useState('https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -27,7 +28,12 @@ export default function CommitteeWinner() {
       const [roundsRes, payoutReqRes, membersRes] = await Promise.all([
         api.get('/committee/rounds'),
         api.get(`/committee/payout-requests?month=${month}&year=${year}`),
-        api.get(`/committee/members-status?month=${month}&year=${year}`)
+        api.get(`/committee/members-status?month=${month}&year=${year}`),
+        api.get('/settings').then(res => {
+          if (res.data?.data?.whatsapp_group_link) {
+            setWhatsappLink(res.data.data.whatsapp_group_link)
+          }
+        }).catch(() => {})
       ])
       setRounds(roundsRes.data.data || [])
       setPayoutRequests(payoutReqRes.data.data || [])
@@ -125,7 +131,13 @@ export default function CommitteeWinner() {
       {currentRound?.winner_name && (
         <div className="bg-yellow-50 border border-yellow-300 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
           <div className="flex items-center gap-4">
-            <span className="text-5xl">🏆</span>
+            <div className="w-14 h-14 rounded-2xl border-2 border-yellow-400 overflow-hidden bg-yellow-100 flex items-center justify-center shrink-0 shadow">
+              {currentRound.winner_photo ? (
+                <img src={getImageUrl(currentRound.winner_photo)} alt={currentRound.winner_name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-3xl">🏆</span>
+              )}
+            </div>
             <div>
               <p className="font-black text-yellow-950 text-xl">{currentRound.winner_name}</p>
               <p className="text-yellow-800 text-sm mt-0.5">
@@ -141,7 +153,7 @@ export default function CommitteeWinner() {
           <button
             onClick={() => {
               const amt = (currentRound.payout_amount || currentRound.total_collected)?.toLocaleString('en-IN')
-              const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${currentRound.winner_name}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amt}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.vercel.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+              const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${currentRound.winner_name}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amt}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.vercel.app\n💬 WhatsApp Group: ${whatsappLink}`
               window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
             }}
             className="bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 shrink-0 transition-all"
@@ -251,14 +263,23 @@ export default function CommitteeWinner() {
                   }`}
                 >
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-gray-900 text-base">{pr.member_name}</span>
-                      <span className="text-xs font-mono text-gray-500">({pr.member_phone})</span>
-                      {isWinner && (
-                        <span className="bg-yellow-400 text-yellow-950 text-xs px-2.5 py-0.5 rounded-full font-black flex items-center gap-1 shadow-sm">
-                          <span>🏆</span> चयनित विनर
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-emerald-50 border border-emerald-300 flex items-center justify-center shrink-0 shadow-sm">
+                        {pr.member_photo ? (
+                          <img src={getImageUrl(pr.member_photo)} alt={pr.member_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-base">👤</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-gray-900 text-base">{pr.member_name}</span>
+                        <span className="text-xs font-mono text-gray-500">({pr.member_phone})</span>
+                        {isWinner && (
+                          <span className="bg-yellow-400 text-yellow-950 text-xs px-2.5 py-0.5 rounded-full font-black flex items-center gap-1 shadow-sm">
+                            <span>🏆</span> चयनित विनर
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs pt-0.5">
@@ -326,7 +347,16 @@ export default function CommitteeWinner() {
             {rounds.filter(r => r.winner_name).map(r => (
               <div key={r.id} className="flex justify-between items-center py-3 px-2 hover:bg-gray-50 rounded-lg">
                 <span className="text-sm text-gray-500">{MONTH_NAMES[r.month]} {r.year}</span>
-                <span className="font-bold text-gray-900">🏆 {r.winner_name}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-emerald-50 border border-slate-200 flex items-center justify-center shrink-0">
+                    {r.winner_photo ? (
+                      <img src={getImageUrl(r.winner_photo)} alt={r.winner_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs">🏆</span>
+                    )}
+                  </div>
+                  <span className="font-bold text-gray-900">🏆 {r.winner_name}</span>
+                </div>
                 <span className="text-red-600 font-extrabold text-sm">
                   - ₹ {(r.payout_amount || r.total_collected)?.toLocaleString('en-IN')}
                 </span>

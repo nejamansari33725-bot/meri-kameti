@@ -7,10 +7,11 @@ const path = require('path');
 const db = require('../database');
 const { authMiddleware } = require('../middleware/auth');
 const { notifyWhatsApp } = require('../utils/whatsapp');
+const { uploadsDir } = require('../utils/storagePath');
 
-// Multer setup for profile photo uploads
+// Multer setup for profile photo uploads (stored on persistent cloud volume)
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `avatar_${Date.now()}${ext}`);
@@ -112,7 +113,13 @@ router.post('/login', (req, res) => {
     { expiresIn: '7d' }
   );
 
-  res.json({ message: 'Login successful!', token, role: user.role, name: user.name });
+  res.json({ 
+    message: 'Login successful!', 
+    token, 
+    role: user.role, 
+    name: user.name,
+    profile_photo: user.profile_photo || ''
+  });
 });
 
 // Get current user

@@ -210,7 +210,7 @@ router.get('/my', authMiddleware, (req, res) => {
 // Get pending payments (admin)
 router.get('/pending', authMiddleware, adminOnly, (req, res) => {
   const payments = db.prepare(`
-    SELECT p.*, u.name as member_name, u.phone as member_phone
+    SELECT p.*, u.name as member_name, u.phone as member_phone, u.profile_photo as member_photo
     FROM payments p
     JOIN users u ON p.user_id = u.id
     WHERE p.status = 'pending'
@@ -223,7 +223,7 @@ router.get('/pending', authMiddleware, adminOnly, (req, res) => {
 router.get('/all', authMiddleware, adminOnly, (req, res) => {
   const { month, year, status } = req.query;
   let query = `
-    SELECT p.*, u.name as member_name, u.phone as member_phone
+    SELECT p.*, u.name as member_name, u.phone as member_phone, u.profile_photo as member_photo
     FROM payments p
     JOIN users u ON p.user_id = u.id
     WHERE 1=1

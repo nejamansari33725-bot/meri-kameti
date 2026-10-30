@@ -14,7 +14,7 @@ export default function AdminSettings() {
     upi_name: 'Nizam Ansari',
     qr_code_url: '/upi-qr.png',
     default_late_fine: '0',
-    whatsapp_group_link: 'https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2'
+    whatsapp_group_link: 'https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2'
   })
   const [qrFile, setQrFile] = useState(null)
   const [qrPreview, setQrPreview] = useState(null)

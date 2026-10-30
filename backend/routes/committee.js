@@ -7,7 +7,7 @@ const { notifyWhatsApp } = require('../utils/whatsapp');
 // Get all committee rounds
 router.get('/rounds', authMiddleware, (req, res) => {
   const rounds = db.prepare(`
-    SELECT r.*, u.name as winner_name, u.phone as winner_phone
+    SELECT r.*, u.name as winner_name, u.phone as winner_phone, u.profile_photo as winner_photo
     FROM committee_rounds r
     LEFT JOIN users u ON r.winner_user_id = u.id
     ORDER BY r.year DESC, r.month DESC
@@ -131,7 +131,7 @@ router.get('/members-status', authMiddleware, adminOnly, (req, res) => {
   if (!month || !year) return res.status(400).json({ error: 'Month aur year daalen.' });
 
   const members = db.prepare(`
-    SELECT u.id, u.name, u.phone,
+    SELECT u.id, u.name, u.phone, u.profile_photo,
       COALESCE((
         SELECT SUM(amount) FROM payments 
         WHERE user_id = u.id AND month = ? AND year = ? AND status = 'approved'
@@ -193,7 +193,7 @@ router.get('/payout-requests', authMiddleware, adminOnly, (req, res) => {
   const y = year ? parseInt(year) : null;
 
   let query = `
-    SELECT pr.*, u.name as member_name, u.phone as member_phone,
+    SELECT pr.*, u.name as member_name, u.phone as member_phone, u.profile_photo as member_photo,
       COALESCE((
         SELECT SUM(amount) FROM payments 
         WHERE user_id = u.id AND month = pr.month AND year = pr.year AND status = 'approved'

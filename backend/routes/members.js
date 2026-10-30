@@ -16,6 +16,7 @@ function getMembersWithLedger() {
       u.name, 
       u.phone, 
       u.email, 
+      u.profile_photo,
       u.role,
       u.status, 
       u.created_at,
@@ -88,7 +89,7 @@ router.get('/', authMiddleware, (req, res) => {
 // Get pending member registrations waiting for Admin approval
 router.get('/pending-registrations', authMiddleware, adminOnly, (req, res) => {
   const pending = db.prepare(`
-    SELECT id, name, phone, email, status, created_at
+    SELECT id, name, phone, email, profile_photo, status, created_at
     FROM users
     WHERE role = 'member' AND status = 'pending'
     ORDER BY created_at DESC

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import api from '../../api/axios'
+import api, { getImageUrl } from '../../api/axios'
 
 const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -11,6 +11,7 @@ export default function Members() {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [whatsappLink, setWhatsappLink] = useState('https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2')
 
   // Late Fine Modal state
   const [fineModal, setFineModal] = useState(null) // { memberId, memberName, phone }
@@ -29,6 +30,12 @@ export default function Members() {
   const [savingKhata, setSavingKhata] = useState(false)
 
   const fetchMembers = () => {
+    api.get('/settings').then(res => {
+      if (res.data?.data?.whatsapp_group_link) {
+        setWhatsappLink(res.data.data.whatsapp_group_link)
+      }
+    }).catch(() => {})
+
     api.get('/members').then(res => setMembers(res.data.data)).finally(() => setLoading(false))
   }
 
@@ -89,7 +96,7 @@ export default function Members() {
       const mPhone = res.data?.data?.phone || fineModal.phone
       const amt = res.data?.data?.amount || fineAmount
       const rsn = fineReason || 'समय पर किश्त जमा न करने पर'
-      const msg = `⚠️ *MERA KAMETI — लेट फाइन सूचना (Late Fine Notice)* ⚠️\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${mName}*\n⚡ लेट फाइन राशि: *₹${amt}*\n📅 महीना: ${MONTH_NAMES[fineMonth]} ${fineYear}\n📝 कारण: ${rsn}\n━━━━━━━━━━━━━━━━━━━━\nकृपया पोर्टल पर जाकर लेट फाइन का भुगतान करें:\n👉 लाइव पोर्टल: https://merakameti.up.railway.app/pay\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      const msg = `⚠️ *MERA KAMETI — लेट फाइन सूचना (Late Fine Notice)* ⚠️\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${mName}*\n⚡ लेट फाइन राशि: *₹${amt}*\n📅 महीना: ${MONTH_NAMES[fineMonth]} ${fineYear}\n📝 कारण: ${rsn}\n━━━━━━━━━━━━━━━━━━━━\nकृपया पोर्टल पर जाकर लेट फाइन का भुगतान करें:\n👉 लाइव पोर्टल: https://merakameti.up.railway.app/pay\n💬 WhatsApp Group: ${whatsappLink}`
       if (mPhone) {
         const cleanPhone = String(mPhone).replace(/[^0-9]/g, '')
         const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone
@@ -217,22 +224,31 @@ export default function Members() {
                   <tr key={m.id} className="hover:bg-gray-50">
                     <td className="py-3.5 px-3 text-gray-400">{i + 1}</td>
                     <td className="py-3.5 px-3 font-semibold text-gray-900">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span>{m.name}</span>
-                        {m.role === 'admin' && (
-                          <span className="text-[10px] bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
-                            ADMIN
-                          </span>
-                        )}
-                        {m.pending_payment_count > 0 && (
-                          <Link
-                            to="/admin/approvals"
-                            className="bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm flex items-center gap-1"
-                            title="पेंडिंग पेमेंट अप्रूव करें"
-                          >
-                            <span>⏳</span> ₹{m.pending_payment_amount} अप्रूव करें →
-                          </Link>
-                        )}
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-full overflow-hidden bg-emerald-50 border border-emerald-300 flex items-center justify-center shrink-0 shadow-sm">
+                          {m.profile_photo ? (
+                            <img src={getImageUrl(m.profile_photo)} alt={m.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-base">👤</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{m.name}</span>
+                          {m.role === 'admin' && (
+                            <span className="text-[10px] bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
+                              ADMIN
+                            </span>
+                          )}
+                          {m.pending_payment_count > 0 && (
+                            <Link
+                              to="/admin/approvals"
+                              className="bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm flex items-center gap-1"
+                              title="पेंडिंग पेमेंट अप्रूव करें"
+                            >
+                              <span>⏳</span> ₹{m.pending_payment_amount} अप्रूव करें →
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="py-3.5 px-3 text-gray-600 font-mono text-xs">{m.phone}</td>

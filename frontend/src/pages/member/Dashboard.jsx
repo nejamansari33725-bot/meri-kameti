@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import api from '../../api/axios'
+import api, { getImageUrl } from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
 
 const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
@@ -14,6 +14,7 @@ export default function MemberDashboard() {
   const [recentPayments, setRecentPayments] = useState([])
   const [myStatement, setMyStatement] = useState(null)
   const [notifications, setNotifications] = useState([])
+  const [whatsappLink, setWhatsappLink] = useState('https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2')
   const [loading, setLoading] = useState(true)
 
   // Payout application state ("मुझे इस महीने इतना पैसा चाहिए / Payout Bid")
@@ -30,12 +31,16 @@ export default function MemberDashboard() {
       api.get('/payments/my'),
       api.get('/auth/me'),
       api.get('/committee/my-payout-requests'),
+      api.get('/settings').catch(() => ({ data: { data: {} } })),
       api.get('/notifications').catch(() => ({ data: { data: [] } }))
-    ]).then(([s, p, me, pr, notifRes]) => {
+    ]).then(([s, p, me, pr, setRes, notifRes]) => {
       setSummary(s.data.data)
       setRecentPayments(p.data.data.slice(0, 5))
       setMyPayoutRequests(pr.data.data || [])
       setNotifications(notifRes.data?.data || [])
+      if (setRes.data?.data?.whatsapp_group_link) {
+        setWhatsappLink(setRes.data.data.whatsapp_group_link)
+      }
       if (me.data?.data?.id) {
         return api.get(`/members/${me.data.data.id}/statement`)
       }
@@ -138,7 +143,7 @@ export default function MemberDashboard() {
         </div>
 
         <a
-          href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
+          href={whatsappLink}
           target="_blank"
           rel="noopener noreferrer"
           className="bg-white text-emerald-900 hover:bg-emerald-50 px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all shadow-lg flex items-center gap-2 shrink-0 transform hover:scale-105"
@@ -154,9 +159,18 @@ export default function MemberDashboard() {
         <div className="lg:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-6 sm:p-7 text-white shadow-xl border border-slate-700/50 flex flex-col justify-between">
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-56 h-56 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
           <div>
-            <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-400/25 px-3 py-1 rounded-full text-xs font-bold text-emerald-300 mb-3">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              सदस्य पोर्टल / Member Portal
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-2xl overflow-hidden bg-slate-800 border-2 border-emerald-400/80 flex items-center justify-center shrink-0 shadow-lg">
+                {user?.profile_photo ? (
+                  <img src={getImageUrl(user.profile_photo)} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl">👤</span>
+                )}
+              </div>
+              <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-400/25 px-3 py-1 rounded-full text-xs font-bold text-emerald-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                सदस्य पोर्टल / Member Portal
+              </div>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
               खुशामदीद / Welcome, {user?.name || 'सदस्य'}! 👋
@@ -197,9 +211,18 @@ export default function MemberDashboard() {
         {/* Digital Member Card */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-emerald-800 via-teal-700 to-emerald-600 p-6 text-white shadow-xl border border-emerald-500/30 flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div>
-              <p className="text-[10px] uppercase tracking-widest text-emerald-200 font-bold">Mera Kameti Card</p>
-              <p className="text-base font-extrabold tracking-wide mt-0.5">मेरा कमिटी पासबुक</p>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl border-2 border-white/50 overflow-hidden bg-white/20 flex items-center justify-center shrink-0 shadow-md">
+                {user?.profile_photo ? (
+                  <img src={getImageUrl(user.profile_photo)} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl">👤</span>
+                )}
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-emerald-200 font-bold">Mera Kameti Card</p>
+                <p className="text-base font-extrabold tracking-wide mt-0.5">मेरा कमिटी पासबुक</p>
+              </div>
             </div>
             <Link
               to="/profile"

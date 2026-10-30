@@ -12,6 +12,7 @@ export default function Approvals() {
   const [noteModal, setNoteModal] = useState(null) // { id, action, amount, repayment_amount, member_name }
   const [note, setNote] = useState('')
   const [lateFine, setLateFine] = useState('0')
+  const [whatsappLink, setWhatsappLink] = useState('https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2')
   const [actionLoading, setActionLoading] = useState(false)
 
   const fetchPending = () => {
@@ -23,6 +24,9 @@ export default function Approvals() {
     api.get('/settings').then(res => {
       if (res.data?.data?.default_late_fine) {
         setLateFine(res.data.data.default_late_fine)
+      }
+      if (res.data?.data?.whatsapp_group_link) {
+        setWhatsappLink(res.data.data.whatsapp_group_link)
       }
     }).catch(() => {})
   }, [])
@@ -43,7 +47,7 @@ export default function Approvals() {
       const repMsg = repVal > 0 ? `\n🔄 उठाया पैसा वापसी: ₹${repVal}` : ''
       const total = (parseFloat(p.amount) || 0) + fineVal + repVal
       const now = new Date()
-      const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${p.member_name}*\n💵 किश्त जमा: ₹${p.amount}${repMsg}${fineMsg}\n💰 कुल भुगतान: ₹${total}\n📅 महीना: ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${p.member_name}*\n💵 किश्त जमा: ₹${p.amount}${repMsg}${fineMsg}\n💰 कुल भुगतान: ₹${total}\n📅 महीना: ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.vercel.app\n💬 WhatsApp Group: ${whatsappLink}`
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
 
       fetchPending()
@@ -73,7 +77,7 @@ export default function Approvals() {
         const repMsg = repVal > 0 ? `\n🔄 उठाया पैसा वापसी: ₹${repVal}` : ''
         const total = (parseFloat(noteModal.amount) || 0) + fineVal + repVal
         const now = new Date()
-        const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${noteModal.member_name}*\n💵 किश्त जमा: ₹${noteModal.amount}${repMsg}${fineMsg}\n💰 कुल भुगतान: ₹${total}\n📅 महीना: ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+        const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${noteModal.member_name}*\n💵 किश्त जमा: ₹${noteModal.amount}${repMsg}${fineMsg}\n💰 कुल भुगतान: ₹${total}\n📅 महीना: ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.vercel.app\n💬 WhatsApp Group: ${whatsappLink}`
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
       }
 
@@ -120,9 +124,20 @@ export default function Approvals() {
                 <div key={p.id} className="border border-emerald-200 bg-white rounded-2xl p-4 hover:shadow-md transition-shadow space-y-3">
                   <div className="flex flex-wrap justify-between items-start gap-3">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-black text-lg text-slate-900">{p.member_name}</span>
-                        <span className="text-gray-500 text-xs font-mono">({p.member_phone})</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl overflow-hidden bg-emerald-50 border-2 border-emerald-300 flex items-center justify-center shrink-0 shadow-sm">
+                          {p.member_photo ? (
+                            <img src={getImageUrl(p.member_photo)} alt={p.member_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xl">👤</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-lg text-slate-900">{p.member_name}</span>
+                            <span className="text-gray-500 text-xs font-mono">({p.member_phone})</span>
+                          </div>
+                        </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-emerald-700 font-black text-xl">₹ {p.amount} (किश्त)</span>

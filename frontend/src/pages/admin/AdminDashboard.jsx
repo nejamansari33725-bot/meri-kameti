@@ -12,6 +12,7 @@ export default function AdminDashboard() {
   const [pendingMembers, setPendingMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [whatsappLink, setWhatsappLink] = useState('https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2')
 
   // Direct Payment Approval Modal on Dashboard
   const [selectedImg, setSelectedImg] = useState(null)
@@ -38,6 +39,9 @@ export default function AdminDashboard() {
       if (res.data?.data?.default_late_fine) {
         setLateFine(res.data.data.default_late_fine)
       }
+      if (res.data?.data?.whatsapp_group_link) {
+        setWhatsappLink(res.data.data.whatsapp_group_link)
+      }
     }).catch(() => {})
   }, [])
 
@@ -49,7 +53,7 @@ export default function AdminDashboard() {
       toast.success(`${name} का अकाउंट अप्रूव हो गया! ✅`)
       loadAllData()
 
-      const msg = `🎉 *MERA KAMETI — नया सदस्य जुड़ा!* 🎉\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${name}*\nस्टेटस: ✅ अप्रूव हो चुके हैं!\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      const msg = `🎉 *MERA KAMETI — नया सदस्य जुड़ा!* 🎉\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${name}*\nस्टेटस: ✅ अप्रूव हो चुके हैं!\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल: https://merakameti.vercel.app\n💬 WhatsApp Group: ${whatsappLink}`
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
     } catch (err) {
       toast.error(err.response?.data?.error || 'अप्रूव नहीं हो पाया।')
@@ -90,7 +94,7 @@ export default function AdminDashboard() {
       const fineMsg = fineVal > 0 ? `\n⚡ लेट फाइन: ₹${fineVal}` : ''
       const repMsg = repVal > 0 ? `\n🔄 उठाया पैसा वापसी: ₹${repVal}` : ''
       const total = (parseFloat(p.amount) || 0) + fineVal + repVal
-      const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${p.member_name}*\n💵 किश्त जमा: ₹${p.amount}${repMsg}${fineMsg}\n💰 कुल भुगतान: ₹${total}\n📅 महीना: ${MONTH_NAMES[p.month]} ${p.year}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      const msg = `✅ *MERA KAMETI — पेमेंट रसीद स्वीकृत!* ✅\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${p.member_name}*\n💵 किश्त जमा: ₹${p.amount}${repMsg}${fineMsg}\n💰 कुल भुगतान: ₹${total}\n📅 महीना: ${MONTH_NAMES[p.month]} ${p.year}\nस्टेटस: स्वीकृत (Approved)\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.vercel.app\n💬 WhatsApp Group: ${whatsappLink}`
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
 
       setPaymentActionModal(null)
@@ -169,7 +173,7 @@ export default function AdminDashboard() {
 
   const broadcastMonthlyReport = () => {
     if (!summary) return
-    const msg = `📊 *MERA KAMETI — चालू माह स्थिति (${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()})* 📊\n━━━━━━━━━━━━━━━━━━━━\n🟢 कुल जमा किश्तें: ₹${summary.overallTotalCredit?.toLocaleString('en-IN') || 0}\n🔴 कुल उठाया गया: ₹${summary.overallTotalDebit?.toLocaleString('en-IN') || 0}\n👥 इस माह किश्त जमा सदस्य: ${summary.paidMembers}/${summary.totalMembers}\n🏆 इस माह का विनर: ${summary.winner ? summary.winner.winner_name : 'तय नहीं'}\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल पर देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+    const msg = `📊 *MERA KAMETI — चालू माह स्थिति (${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()})* 📊\n━━━━━━━━━━━━━━━━━━━━\n🟢 कुल जमा किश्तें: ₹${summary.overallTotalCredit?.toLocaleString('en-IN') || 0}\n🔴 कुल उठाया गया: ₹${summary.overallTotalDebit?.toLocaleString('en-IN') || 0}\n👥 इस माह किश्त जमा सदस्य: ${summary.paidMembers}/${summary.totalMembers}\n🏆 इस माह का विनर: ${summary.winner ? summary.winner.winner_name : 'तय नहीं'}\n━━━━━━━━━━━━━━━━━━━━\n👉 कमिटी पोर्टल पर देखें: https://merakameti.vercel.app\n💬 WhatsApp Group: ${whatsappLink}`
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
@@ -178,12 +182,12 @@ export default function AdminDashboard() {
       toast('इस महीने का कोई विनर अभी सेट नहीं है। विनर पेज पर जाकर सेट करें।', { icon: 'ℹ️' })
       return
     }
-    const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${summary.winner.winner_name}* ने ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${(summary.winner.payout_amount || summary.winner.total_collected)?.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+    const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${summary.winner.winner_name}* ने ${MONTH_NAMES[now.getMonth() + 1]} ${now.getFullYear()} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${(summary.winner.payout_amount || summary.winner.total_collected)?.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.vercel.app\n💬 WhatsApp Group: ${whatsappLink}`
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   const broadcastInvite = () => {
-    const msg = `🤝 *MERA KAMETI (मेरा कमिटी) में आपका स्वागत है!* 🤝\n━━━━━━━━━━━━━━━━━━━━\nसभी कमिटी सदस्यों से अनुरोध है कि अपनी किश्त समय पर जमा करें और लाइव खाता बही पोर्टल पर देखें:\n\n🌐 पोर्टल लिंक: https://merakameti.up.railway.app\n💬 आधिकारिक व्हाट्सएप ग्रुप: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2\n━━━━━━━━━━━━━━━━━━━━\n- कमिटी प्रबंधन`
+    const msg = `🤝 *MERA KAMETI (मेरा कमिटी) में आपका स्वागत है!* 🤝\n━━━━━━━━━━━━━━━━━━━━\nसभी कमिटी सदस्यों से अनुरोध है कि अपनी किश्त समय पर जमा करें और लाइव खाता बही पोर्टल पर देखें:\n\n🌐 पोर्टल लिंक: https://merakameti.vercel.app\n💬 आधिकारिक व्हाट्सएप ग्रुप: ${whatsappLink}\n━━━━━━━━━━━━━━━━━━━━\n- कमिटी प्रबंधन`
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
@@ -271,12 +275,21 @@ export default function AdminDashboard() {
                   className="bg-white rounded-2xl p-4 border border-emerald-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-emerald-400 transition-all"
                 >
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-slate-900 text-base">{p.member_name}</span>
-                      <span className="text-xs text-slate-500 font-mono">📱 {p.member_phone}</span>
-                      <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                        {MONTH_NAMES[p.month]} {p.year}
-                      </span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl overflow-hidden bg-emerald-50 border border-emerald-300 flex items-center justify-center shrink-0 shadow-sm">
+                        {p.member_photo ? (
+                          <img src={getImageUrl(p.member_photo)} alt={p.member_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-base">👤</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-black text-slate-900 text-base">{p.member_name}</span>
+                        <span className="text-xs text-slate-500 font-mono">📱 {p.member_phone}</span>
+                        <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          {MONTH_NAMES[p.month]} {p.year}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -369,12 +382,21 @@ export default function AdminDashboard() {
           <div className="divide-y divide-amber-200/60 pt-1">
             {pendingMembers.map(m => (
               <div key={m.id} className="py-2.5 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <span className="font-bold text-slate-900 text-sm">{m.name}</span>
-                  <span className="text-xs text-slate-600 font-mono ml-2">📱 {m.phone}</span>
-                  <span className="text-[11px] text-amber-800 block sm:inline sm:ml-2">
-                    (पंजीकृत: {new Date(m.created_at).toLocaleDateString()})
-                  </span>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0 shadow-sm">
+                    {m.profile_photo ? (
+                      <img src={getImageUrl(m.profile_photo)} alt={m.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs">👤</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-900 text-sm">{m.name}</span>
+                    <span className="text-xs text-slate-600 font-mono ml-2">📱 {m.phone}</span>
+                    <span className="text-[11px] text-amber-800 block sm:inline sm:ml-2">
+                      (पंजीकृत: {new Date(m.created_at).toLocaleDateString()})
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -418,7 +440,7 @@ export default function AdminDashboard() {
           </div>
 
           <a
-            href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
+            href={whatsappLink}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs bg-[#25D366] hover:bg-[#20ba59] text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition-all"

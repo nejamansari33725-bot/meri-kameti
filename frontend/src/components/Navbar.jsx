@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import api from '../api/axios'
+import api, { getImageUrl } from '../api/axios'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -9,6 +9,7 @@ export default function Navbar() {
   const location = useLocation()
   const [pendingCount, setPendingCount] = useState(0)
   const [unreadNotifs, setUnreadNotifs] = useState(0)
+  const [whatsappLink, setWhatsappLink] = useState('https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2')
 
   const handleLogout = () => {
     logout()
@@ -18,6 +19,12 @@ export default function Navbar() {
   const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
+    api.get('/settings').then(res => {
+      if (res.data?.data?.whatsapp_group_link) {
+        setWhatsappLink(res.data.data.whatsapp_group_link)
+      }
+    }).catch(() => {})
+
     if (isAdmin) {
       api.get('/payments/pending').then(res => {
         setPendingCount(res.data?.data?.length || 0)
@@ -103,7 +110,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 sm:gap-2.5">
             {/* WhatsApp Group Link Button */}
             <a
-              href="https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2"
+              href={whatsappLink}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-[#25D366] hover:bg-[#20ba59] text-white text-xs px-2.5 sm:px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md shadow-green-500/20 transition-all transform hover:scale-105 shrink-0"
@@ -117,11 +124,17 @@ export default function Navbar() {
 
             <Link
               to="/profile"
-              className="hidden sm:flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700/60 hover:border-emerald-500/50 transition-all group"
+              className="hidden sm:flex items-center gap-2 bg-slate-800/80 hover:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-700/60 hover:border-emerald-500/50 transition-all group"
               title="प्रोफ़ाइल / Profile Settings"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-xs text-slate-200 group-hover:text-emerald-300 font-semibold truncate max-w-[90px]">{user?.name}</span>
+              <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-700 border border-emerald-400 flex items-center justify-center shrink-0">
+                {user?.profile_photo ? (
+                  <img src={getImageUrl(user.profile_photo)} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[11px]">👤</span>
+                )}
+              </div>
+              <span className="text-xs text-slate-200 group-hover:text-emerald-300 font-semibold truncate max-w-[85px]">{user?.name}</span>
               <span className="text-[10px] text-slate-400">⚙️</span>
             </Link>
             <button

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import api from '../../api/axios'
+import api, { getImageUrl } from '../../api/axios'
 import { useAuth } from '../../context/AuthContext'
 
 export default function Profile() {
-  const { user, login } = useAuth()
+  const { user, login, updateUserPhoto } = useAuth()
   const [activeTab, setActiveTab] = useState('details') // 'details' | 'password'
 
   // Personal details state
@@ -80,7 +80,10 @@ export default function Profile() {
 
       toast.success(res.data?.message || 'प्रोफ़ाइल जानकारी सेव हो गई! / Profile saved! ✅')
       if (res.data?.token) {
-        login(res.data.token, res.data.role, res.data.name)
+        login(res.data.token, res.data.role, res.data.name, res.data.profile_photo)
+      }
+      if (res.data?.profile_photo) {
+        updateUserPhoto(res.data.profile_photo)
       }
       setPhotoFile(null)
       fetchProfile()
@@ -113,7 +116,7 @@ export default function Profile() {
       toast.success('पासवर्ड सफलतापूर्वक बदल गया! / Password changed successfully! ✅')
       setPassForm({ current_password: '', new_password: '', confirm_password: '' })
       if (res.data?.token) {
-        login(res.data.token, res.data.role, res.data.name)
+        login(res.data.token, res.data.role, res.data.name, res.data.profile_photo)
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'पासवर्ड बदलने में त्रुटि आई / Password update error.')
@@ -130,7 +133,7 @@ export default function Profile() {
     )
   }
 
-  const currentAvatar = photoPreview || formData.profile_photo
+  const currentAvatar = photoPreview || (formData.profile_photo ? getImageUrl(formData.profile_photo) : null)
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">

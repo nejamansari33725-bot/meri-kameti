@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import api from '../api/axios'
+import api, { getImageUrl } from '../api/axios'
 
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -232,15 +232,28 @@ export default function KhataLedger() {
                     <tr key={m.id} className="hover:bg-gray-50/80 transition-colors">
                       <td className="py-3.5 px-3 text-gray-400">{idx + 1}</td>
                       <td className="py-3.5 px-3 font-semibold text-gray-900">
-                        {m.name}
-                        {m.role === 'admin' && (
-                          <span className="ml-1.5 text-[10px] bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
-                            ADMIN
-                          </span>
-                        )}
-                        {m.status === 'inactive' && (
-                          <span className="ml-2 text-xs text-red-500 font-normal">(Inactive)</span>
-                        )}
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-emerald-50 border border-emerald-300 flex items-center justify-center shrink-0 shadow-sm">
+                            {m.profile_photo ? (
+                              <img src={getImageUrl(m.profile_photo)} alt={m.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-sm">👤</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span>{m.name}</span>
+                              {m.role === 'admin' && (
+                                <span className="text-[10px] bg-yellow-400 text-yellow-900 font-bold px-1.5 py-0.5 rounded-full">
+                                  ADMIN
+                                </span>
+                              )}
+                            </div>
+                            {m.status === 'inactive' && (
+                              <span className="text-xs text-red-500 font-normal block">(Inactive)</span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="py-3.5 px-3 text-gray-600 font-mono text-xs">{m.phone}</td>
                       <td className="py-3.5 px-3 text-right font-bold text-green-600">
@@ -356,11 +369,20 @@ export default function KhataLedger() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSelectedMember(null)}>
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start border-b border-gray-100 pb-3">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <span>👤</span> {selectedMember.name} की पासबुक
-                </h3>
-                <p className="text-sm text-gray-500">मोबाइल: {selectedMember.phone}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl overflow-hidden bg-emerald-50 border-2 border-emerald-400 flex items-center justify-center shrink-0 shadow">
+                  {selectedMember.profile_photo ? (
+                    <img src={getImageUrl(selectedMember.profile_photo)} alt={selectedMember.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl">👤</span>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    {selectedMember.name} की पासबुक
+                  </h3>
+                  <p className="text-sm text-gray-500">मोबाइल: {selectedMember.phone}</p>
+                </div>
               </div>
               <button onClick={() => setSelectedMember(null)} className="text-gray-400 hover:text-gray-700 text-2xl font-bold">
                 ✕

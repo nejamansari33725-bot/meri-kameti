@@ -31,7 +31,7 @@ export default function Login() {
         password: form.password.trim()
       }
       const res = await api.post('/auth/login', cleanForm)
-      login(res.data.token, res.data.role, res.data.name)
+      login(res.data.token, res.data.role, res.data.name, res.data.profile_photo)
       toast.success(`स्वागत है, ${res.data.name}! 🎉`)
       navigate(res.data.role === 'admin' ? '/admin' : '/dashboard')
     } catch (err) {
