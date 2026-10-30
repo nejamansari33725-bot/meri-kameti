@@ -67,11 +67,19 @@ router.post('/register', (req, res) => {
 
 // Login
 router.post('/login', (req, res) => {
-  const { phone, password } = req.body;
+  let { phone, password } = req.body;
   if (!phone || !password) {
     return res.status(400).json({ error: 'Phone aur password daalen.' });
   }
-  const user = db.prepare('SELECT * FROM users WHERE phone = ?').get(phone);
+
+  const rawPhone = String(phone).trim();
+  let cleanDigits = rawPhone.replace(/\D/g, '');
+  if (cleanDigits.length > 10) {
+    cleanDigits = cleanDigits.slice(-10);
+  }
+
+  // Look up user by clean 10-digit phone or raw input
+  const user = db.prepare('SELECT * FROM users WHERE phone = ? OR phone = ?').get(cleanDigits, rawPhone);
   if (!user) {
     return res.status(400).json({ error: 'Phone number registered nahi hai.' });
   }
@@ -91,7 +99,9 @@ router.post('/login', (req, res) => {
     });
   }
 
-  const valid = bcrypt.compareSync(password, user.password);
+  const rawPassword = String(password);
+  const cleanPassword = rawPassword.trim();
+  const valid = bcrypt.compareSync(rawPassword, user.password) || bcrypt.compareSync(cleanPassword, user.password);
   if (!valid) {
     return res.status(400).json({ error: 'Password galat hai.' });
   }
