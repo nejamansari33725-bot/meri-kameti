@@ -131,19 +131,21 @@ router.post('/rounds', authMiddleware, adminOnly, (req, res) => {
   res.json({ message: `${winner?.name} ko winner set kar diya gaya! (Rs. ${actualPayout})` });
 });
 
-// Get members with their payment status for a specific month (for winner selection)
+// Get members with their payment status for a specific month (distinct, no duplicate rows)
 router.get('/members-status', authMiddleware, adminOnly, (req, res) => {
   const { month, year } = req.query;
   if (!month || !year) return res.status(400).json({ error: 'Month aur year daalen.' });
 
   const members = db.prepare(`
     SELECT u.id, u.name, u.phone,
-      p.amount, p.status as payment_status, p.reference_no,
+      COALESCE((
+        SELECT SUM(amount) FROM payments 
+        WHERE user_id = u.id AND month = ? AND year = ? AND status = 'approved'
+      ), 0) as amount,
       (SELECT COUNT(id) FROM committee_rounds WHERE winner_user_id = u.id) as previous_wins
     FROM users u
-    LEFT JOIN payments p ON u.id = p.user_id AND p.month = ? AND p.year = ? AND p.status = 'approved'
     WHERE u.status = 'active'
-    ORDER BY u.name
+    ORDER BY u.name ASC
   `).all(parseInt(month), parseInt(year));
 
   res.json({ data: members });
@@ -193,15 +195,23 @@ router.get('/my-payout-requests', authMiddleware, (req, res) => {
 // Admin Get Payout Requests for a Month
 router.get('/payout-requests', authMiddleware, adminOnly, (req, res) => {
   const { month, year } = req.query;
+  const m = month ? parseInt(month) : null;
+  const y = year ? parseInt(year) : null;
+
   let query = `
-    SELECT pr.*, u.name as member_name, u.phone as member_phone
+    SELECT pr.*, u.name as member_name, u.phone as member_phone,
+      COALESCE((
+        SELECT SUM(amount) FROM payments 
+        WHERE user_id = u.id AND month = pr.month AND year = pr.year AND status = 'approved'
+      ), 0) as paid_amount,
+      (SELECT COUNT(id) FROM committee_rounds WHERE winner_user_id = u.id) as previous_wins
     FROM payout_requests pr
     JOIN users u ON pr.user_id = u.id
     WHERE 1=1
   `;
   const params = [];
-  if (month) { query += ' AND pr.month = ?'; params.push(parseInt(month)); }
-  if (year) { query += ' AND pr.year = ?'; params.push(parseInt(year)); }
+  if (m) { query += ' AND pr.month = ?'; params.push(m); }
+  if (y) { query += ' AND pr.year = ?'; params.push(y); }
   query += ' ORDER BY pr.created_at DESC';
 
   const requests = db.prepare(query).all(...params);

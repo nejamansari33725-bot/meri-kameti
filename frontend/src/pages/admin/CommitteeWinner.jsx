@@ -9,26 +9,31 @@ export default function CommitteeWinner() {
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
-  const [members, setMembers] = useState([])
   const [rounds, setRounds] = useState([])
   const [payoutRequests, setPayoutRequests] = useState([])
+  const [allMembers, setAllMembers] = useState([])
   const [payoutInput, setPayoutInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  // Manual / Offline Winner Selector State
+  const [showManualSelect, setShowManualSelect] = useState(false)
+  const [manualMemberId, setManualMemberId] = useState('')
+  const [manualAmount, setManualAmount] = useState('')
+
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [membersRes, roundsRes, payoutReqRes] = await Promise.all([
-        api.get(`/committee/members-status?month=${month}&year=${year}`),
+      const [roundsRes, payoutReqRes, membersRes] = await Promise.all([
         api.get('/committee/rounds'),
-        api.get(`/committee/payout-requests?month=${month}&year=${year}`)
+        api.get(`/committee/payout-requests?month=${month}&year=${year}`),
+        api.get(`/committee/members-status?month=${month}&year=${year}`)
       ])
-      setMembers(membersRes.data.data)
-      setRounds(roundsRes.data.data)
+      setRounds(roundsRes.data.data || [])
       setPayoutRequests(payoutReqRes.data.data || [])
+      setAllMembers(membersRes.data.data || [])
       
-      const cr = roundsRes.data.data.find(r => r.month === month && r.year === year)
+      const cr = (roundsRes.data.data || []).find(r => r.month === month && r.year === year)
       if (cr) {
         setPayoutInput(cr.payout_amount || cr.total_collected || '')
       } else {
@@ -61,7 +66,7 @@ export default function CommitteeWinner() {
 
       // Automatically dispatch winner announcement to WhatsApp group
       const amtStr = finalPayout ? finalPayout.toLocaleString('en-IN') : 'कमिटी राशि'
-      const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${memberName}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amtStr}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+      const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${memberName}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amtStr}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.vercel.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error.')
@@ -70,8 +75,19 @@ export default function CommitteeWinner() {
     }
   }
 
+  const handleManualWinnerSubmit = (e) => {
+    e.preventDefault()
+    if (!manualMemberId) {
+      return toast.error('कृपया सदस्य चुनें / Please select member.')
+    }
+    const selected = allMembers.find(m => String(m.id) === String(manualMemberId))
+    const name = selected?.name || 'सदस्य'
+    setWinner(manualMemberId, name, manualAmount || payoutInput)
+    setShowManualSelect(false)
+  }
+
   const currentRound = rounds.find(r => r.month === month && r.year === year)
-  const totalThisMonthPaid = members.reduce((sum, m) => sum + (m.amount ? parseFloat(m.amount) : 0), 0)
+  const totalThisMonthPaid = allMembers.reduce((sum, m) => sum + (m.amount ? parseFloat(m.amount) : 0), 0)
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-6">
@@ -110,7 +126,7 @@ export default function CommitteeWinner() {
         </div>
       </div>
 
-      {/* Current winner */}
+      {/* Current winner banner */}
       {currentRound?.winner_name && (
         <div className="bg-yellow-50 border border-yellow-300 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
           <div className="flex items-center gap-4">
@@ -130,7 +146,7 @@ export default function CommitteeWinner() {
           <button
             onClick={() => {
               const amt = (currentRound.payout_amount || currentRound.total_collected)?.toLocaleString('en-IN')
-              const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${currentRound.winner_name}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amt}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.up.railway.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
+              const msg = `🏆 *MERA KAMETI — विनर घोषणा!* 🏆\n━━━━━━━━━━━━━━━━━━━━\n🎉 मुबारक हो! *${currentRound.winner_name}* ने ${MONTH_NAMES[month]} ${year} की कमिटी उठाई है!\n💰 उठाया गया पेआउट: ₹${amt}\n📅 महीना: ${MONTH_NAMES[month]} ${year}\n━━━━━━━━━━━━━━━━━━━━\n👉 लाइव खाता देखें: https://merakameti.vercel.app\n💬 WhatsApp Group: https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl&p=a&mlu=4&ilr=4&iam=2`
               window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
             }}
             className="bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 shrink-0 transition-all"
@@ -140,124 +156,167 @@ export default function CommitteeWinner() {
         </div>
       )}
 
-      {/* NEW SECTION: Member Payout Applications / Bids ("मुझे इस महीने इतना पैसा चाहिए") */}
-      <div className="card border-2 border-amber-300 bg-gradient-to-br from-amber-50/50 via-white to-orange-50/40">
+      {/* ONLY APPLIED MEMBERS SECTION */}
+      <div className="card border-2 border-emerald-300 bg-gradient-to-br from-emerald-50/40 via-white to-amber-50/30">
         <div className="flex flex-wrap justify-between items-center mb-3 gap-2">
           <div>
-            <h2 className="text-lg font-black text-amber-950 flex items-center gap-2">
-              <span>🙋‍♂️</span> कमिटी उठाने के लिए आए आवेदन (Member Payout Bids) ({payoutRequests.length})
+            <h2 className="text-lg font-black text-emerald-950 flex items-center gap-2">
+              <span>🙋‍♂️</span> कमिटी उठाने के लिए आए आवेदन / Applied Members ({payoutRequests.length})
             </h2>
-            <p className="text-xs text-amber-800">
-              {MONTH_NAMES[month]} {year} में जिन सदस्यों ने पैसा उठाने के लिए अर्जी लगाई है
+            <p className="text-xs text-emerald-800">
+              यहाँ सिर्फ वही सदस्य दिख रहे हैं जिन्होंने {MONTH_NAMES[month]} {year} में कमिटी उठाने के लिए अप्लाई किया है
             </p>
           </div>
+          
+          <button
+            type="button"
+            onClick={() => setShowManualSelect(!showManualSelect)}
+            className="text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-lg border border-emerald-300 transition-all flex items-center gap-1"
+          >
+            {showManualSelect ? '✕ मैन्युअल विकल्प छुपाएं' : '➕ किसी अन्य सदस्य को सीधे चुनें'}
+          </button>
         </div>
 
-        {payoutRequests.length === 0 ? (
-          <div className="text-center py-6 text-gray-400 bg-white/60 rounded-xl border border-dashed border-gray-200">
-            <span className="text-3xl block mb-1">📭</span>
-            <p className="text-xs text-gray-500">इस महीने किसी सदस्य ने अभी तक पैसा उठाने के लिए आवेदन नहीं किया है।</p>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {payoutRequests.map(pr => (
-              <div
-                key={pr.id}
-                className="p-3.5 bg-white rounded-xl border border-amber-200 flex flex-wrap justify-between items-center gap-3 shadow-sm hover:border-amber-400 transition-all"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-gray-900 text-base">{pr.member_name}</span>
-                    <span className="text-xs font-mono text-gray-500">({pr.member_phone})</span>
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-2 items-center">
-                    <span className="bg-amber-100 text-amber-900 font-black px-2.5 py-0.5 rounded-lg text-sm">
-                      मांग: ₹{pr.requested_amount?.toLocaleString('en-IN')}
-                    </span>
-                    {pr.reason && (
-                      <span className="italic text-gray-600">
-                        "{pr.reason}"
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPayoutInput(pr.requested_amount)
-                      setWinner(pr.user_id, pr.member_name, pr.requested_amount)
-                    }}
-                    disabled={saving || currentRound?.winner_user_id === pr.user_id}
-                    className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-md transition-all flex items-center gap-1.5"
-                  >
-                    <span>🏆</span> इस मांग (₹{pr.requested_amount?.toLocaleString('en-IN')}) पर विनर बनाएं
-                  </button>
-                </div>
+        {/* Manual selector accordion (in case of offline agreement) */}
+        {showManualSelect && (
+          <form onSubmit={handleManualWinnerSubmit} className="mb-4 p-4 bg-emerald-50/70 border border-emerald-300 rounded-xl space-y-3">
+            <div className="text-xs font-bold text-emerald-900">
+              📌 अगर किसी सदस्य ने ऑनलाइन अप्लाई नहीं किया और ऑफ़लाइन बात हुई है, तो यहाँ से चुनें:
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">सदस्य चुनें</label>
+                <select
+                  className="input text-sm"
+                  value={manualMemberId}
+                  onChange={e => setManualMemberId(e.target.value)}
+                  required
+                >
+                  <option value="">-- सदस्य चुनें --</option>
+                  {allMembers.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.phone}) {m.previous_wins > 0 ? `[पहले ${m.previous_wins} बार उठा चुके]` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ))}
-          </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">पेआउट राशि (₹)</label>
+                <input
+                  type="number"
+                  className="input text-sm"
+                  placeholder={`₹ ${payoutInput || totalThisMonthPaid}`}
+                  value={manualAmount}
+                  onChange={e => setManualAmount(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowManualSelect(false)}
+                className="btn-secondary text-xs py-1.5 px-3"
+              >
+                रद्द करें
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 px-4 rounded-lg shadow"
+              >
+                🏆 विनर सेट करें
+              </button>
+            </div>
+          </form>
         )}
-      </div>
-
-      {/* Members list */}
-      <div className="card">
-        <h2 className="font-semibold text-gray-800 mb-3">
-          सदस्यों की सूची — {MONTH_NAMES[month]} {year} Payment Status
-        </h2>
-        <p className="text-xs text-gray-500 mb-4">
-          जिस सदस्य को विनर चुनेंगे, उनके खाते में ₹{(payoutInput || totalThisMonthPaid || 0).toLocaleString('en-IN')} Debit (उठाया) के रूप में दर्ज हो जाएगा।
-        </p>
 
         {loading ? (
-          <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div></div>
-        ) : members.length === 0 ? (
-          <p className="text-gray-400 text-center py-4">कोई सदस्य नहीं मिला।</p>
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-emerald-600 border-t-transparent"></div>
+          </div>
+        ) : payoutRequests.length === 0 ? (
+          <div className="text-center py-8 px-4 bg-white/70 rounded-xl border border-dashed border-gray-300">
+            <span className="text-4xl block mb-2">📭</span>
+            <p className="font-bold text-gray-700 text-sm">इस महीने किसी भी सदस्य ने कमिटी उठाने के लिए आवेदन (Apply) नहीं किया है।</p>
+            <p className="text-xs text-gray-500 mt-1">
+              सदस्य अपने मोबाइल पर लॉगिन करके <strong>"कमिटी उठाने के लिए अर्जी लगाएं"</strong> फॉर्म भरकर आवेदन कर सकते हैं।
+            </p>
+          </div>
         ) : (
-          <div className="space-y-2">
-            {members.map(m => (
-              <div key={m.id} className={`flex flex-wrap justify-between items-center p-4 rounded-xl border transition-all ${
-                currentRound?.winner_user_id === m.id ? 'bg-yellow-50/80 border-yellow-400 shadow-sm' : 'bg-gray-50/70 border-gray-200 hover:bg-gray-50'
-              }`}>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-900 text-base">{m.name}</span>
-                    <span className="text-gray-500 text-xs font-mono">({m.phone})</span>
-                    {currentRound?.winner_user_id === m.id && (
-                      <span className="bg-yellow-400 text-yellow-900 text-xs px-2 py-0.5 rounded-full font-bold ml-1">
-                        🏆 इस महीने के विनर
+          <div className="space-y-3">
+            {payoutRequests.map(pr => {
+              const isWinner = currentRound?.winner_user_id === pr.user_id
+              return (
+                <div
+                  key={pr.id}
+                  className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 ${
+                    isWinner
+                      ? 'bg-yellow-50/90 border-yellow-400 shadow-md ring-2 ring-yellow-400/50'
+                      : 'bg-white border-emerald-200 hover:border-emerald-400 shadow-sm'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-gray-900 text-base">{pr.member_name}</span>
+                      <span className="text-xs font-mono text-gray-500">({pr.member_phone})</span>
+                      {isWinner && (
+                        <span className="bg-yellow-400 text-yellow-950 text-xs px-2.5 py-0.5 rounded-full font-black flex items-center gap-1 shadow-sm">
+                          <span>🏆</span> चयनित विनर
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs pt-0.5">
+                      <span className="bg-emerald-100 text-emerald-900 font-black px-2.5 py-0.5 rounded-lg text-sm border border-emerald-300">
+                        मांग: ₹{pr.requested_amount?.toLocaleString('en-IN')}
                       </span>
+
+                      {pr.paid_amount > 0 ? (
+                        <span className="badge-approved">✅ ₹{pr.paid_amount} किश्त जमा</span>
+                      ) : (
+                        <span className="badge-rejected">❌ इस माह किश्त जमा नहीं</span>
+                      )}
+
+                      {pr.previous_wins > 0 ? (
+                        <span className="text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                          • पहले {pr.previous_wins} बार कमिटी उठा चुके हैं
+                        </span>
+                      ) : (
+                        <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          • पहली बार उठा रहे हैं
+                        </span>
+                      )}
+                    </div>
+
+                    {pr.reason && (
+                      <p className="text-xs text-gray-600 italic bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100 mt-1 inline-block">
+                        वजह: "{pr.reason}"
+                      </p>
                     )}
                   </div>
-                  
-                  <div className="flex items-center gap-2 text-xs">
-                    {m.amount ? (
-                      <span className="badge-approved">✅ ₹{m.amount} जमा (Approved)</span>
-                    ) : (
-                      <span className="badge-rejected">❌ इस माह भुगतान नहीं</span>
-                    )}
-                    {m.previous_wins > 0 && (
-                      <span className="text-amber-800 font-medium">
-                        • पहले {m.previous_wins} बार कमिटी उठा चुके हैं
+
+                  <div className="shrink-0 w-full sm:w-auto flex justify-end">
+                    {isWinner ? (
+                      <span className="bg-yellow-200 text-yellow-900 font-extrabold text-xs sm:text-sm px-4 py-2 rounded-xl border border-yellow-400 shadow-none">
+                        ✓ इस माह के विनर हैं
                       </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPayoutInput(pr.requested_amount)
+                          setWinner(pr.user_id, pr.member_name, pr.requested_amount)
+                        }}
+                        disabled={saving}
+                        className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <span>🏆</span> इस मांग (₹{pr.requested_amount?.toLocaleString('en-IN')}) पर विनर बनाएं
+                      </button>
                     )}
                   </div>
                 </div>
-
-                <button
-                  onClick={() => setWinner(m.id, m.name)}
-                  disabled={saving || currentRound?.winner_user_id === m.id}
-                  className={`text-sm px-4 py-2 rounded-lg font-bold transition-all shadow-sm ${
-                    currentRound?.winner_user_id === m.id
-                      ? 'bg-yellow-200 text-yellow-800 cursor-default shadow-none'
-                      : 'bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50'
-                  }`}
-                >
-                  {currentRound?.winner_user_id === m.id ? '✓ चयनित विनर' : '🏆 विनर चुनें'}
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
