@@ -164,7 +164,36 @@ export default function SubmitPayment() {
     }
   }
 
-  const upiPayLink = `upi://pay?pa=${paymentConfig.upi_id}&pn=${encodeURIComponent(paymentConfig.upi_name)}&cu=INR${totalPayable > 0 ? `&am=${totalPayable}` : ''}`
+  const getUpiUrl = (appScheme) => {
+    const upiId = paymentConfig.upi_id || 'ansarinizam57970-2@oksbi'
+    const upiName = paymentConfig.upi_name || 'MD NEJAM ANSARI'
+    const amtStr = totalPayable > 0 ? `&am=${totalPayable}` : ''
+    const note = encodeURIComponent(`Kameti ${MONTH_NAMES[form.month]} ${form.year}`)
+    const baseQuery = `pa=${upiId}&pn=${encodeURIComponent(upiName)}${amtStr}&cu=INR&tn=${note}`
+
+    if (appScheme === 'phonepe') {
+      return `phonepe://pay?${baseQuery}`
+    }
+    if (appScheme === 'gpay') {
+      return `tez://upi/pay?${baseQuery}`
+    }
+    if (appScheme === 'paytm') {
+      return `paytmmp://pay?${baseQuery}`
+    }
+    return `upi://pay?${baseQuery}`
+  }
+
+  const handleUpiClick = (appScheme) => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    if (!isMobile) {
+      toast('📱 UPI ऐप मोबाइल में सीधे खुलता है। कंप्यूटर पर कृपया नीचे दिया गया QR कोड स्कैन करें या UPI ID कॉपी करें!', {
+        icon: 'ℹ️',
+        duration: 4000
+      })
+    }
+  }
+
+  const upiPayLink = getUpiUrl('any')
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
@@ -449,6 +478,88 @@ export default function SubmitPayment() {
             </div>
           </div>
 
+          {/* STEP 1: DIRECT UPI APP PAYMENT CARD */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900 text-white shadow-xl border border-emerald-400/50 space-y-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/15 pb-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shadow-inner">
+                  📲
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300 block">
+                    STEP 1: सीधा ऑनलाइन पेमेंट करें (1-CLICK PAY)
+                  </span>
+                  <h3 className="font-extrabold text-base text-white">
+                    UPI App से 1-क्लिक में पेमेंट करें
+                  </h3>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-emerald-200 bg-white/10 px-2.5 py-1 rounded-full w-fit">
+                {totalPayable > 0 ? `रकम: ₹${totalPayable.toLocaleString('en-IN')} सेट` : 'रकम ऐप में भरें'}
+              </span>
+            </div>
+
+            <p className="text-xs text-emerald-100">
+              नीचे <strong>"UPI App से Pay करें"</strong> पर क्लिक करते ही आपके मोबाइल में <strong>Google Pay / PhonePe / Paytm</strong> खुल जाएगा और एडमिन की UPI ID (<span className="font-bold text-white">{paymentConfig.upi_name}</span>) पर पेमेंट पेज खुल जाएगा:
+            </p>
+
+            {/* Big 1-Click Pay Button */}
+            <a
+              href={getUpiUrl('any')}
+              onClick={() => handleUpiClick('any')}
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-black text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-500/40 flex items-center justify-center gap-2.5 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <span className="text-xl">⚡</span>
+              <span>
+                {totalPayable > 0 
+                  ? `UPI App से ₹ ${totalPayable.toLocaleString('en-IN')} Pay करें →` 
+                  : 'किसी भी UPI App से सीधे Pay करें →'}
+              </span>
+            </a>
+
+            {/* Quick App Specific Buttons */}
+            <div className="pt-1 space-y-1.5">
+              <span className="text-[11px] font-bold text-emerald-200 uppercase tracking-wider block text-center">
+                या अपनी पसंदीदा ऐप चुनें:
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                <a
+                  href={getUpiUrl('phonepe')}
+                  onClick={() => handleUpiClick('phonepe')}
+                  className="py-2.5 px-2 rounded-xl bg-purple-900/70 hover:bg-purple-800 border border-purple-400/60 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 active:scale-95 shadow"
+                >
+                  <span className="text-lg">🟣</span>
+                  <span>PhonePe</span>
+                </a>
+
+                <a
+                  href={getUpiUrl('gpay')}
+                  onClick={() => handleUpiClick('gpay')}
+                  className="py-2.5 px-2 rounded-xl bg-blue-900/70 hover:bg-blue-800 border border-blue-400/60 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 active:scale-95 shadow"
+                >
+                  <span className="text-lg">🔵</span>
+                  <span>Google Pay</span>
+                </a>
+
+                <a
+                  href={getUpiUrl('paytm')}
+                  onClick={() => handleUpiClick('paytm')}
+                  className="py-2.5 px-2 rounded-xl bg-sky-900/70 hover:bg-sky-800 border border-sky-400/60 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all hover:scale-105 active:scale-95 shadow"
+                >
+                  <span className="text-lg">🔷</span>
+                  <span>Paytm</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-black/30 border border-white/10 text-[11px] text-emerald-100 flex items-center gap-2">
+              <span>💡</span>
+              <span>
+                <strong>पेमेंट करने के बाद:</strong> ऐप से पेमेंट का <strong>स्क्रीनशॉट</strong> लें और नीचे अपलोड करके "पेमेंट सबमिट करें" दबाएं।
+              </span>
+            </div>
+          </div>
+
           {/* Reference / UTR */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
@@ -565,13 +676,38 @@ export default function SubmitPayment() {
           </div>
 
           {/* Quick Pay Button on Mobile */}
-          <div className="pt-1 text-center">
+          <div className="pt-2 text-center space-y-2">
             <a
-              href={upiPayLink}
-              className="inline-flex items-center justify-center gap-1.5 w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 px-3 rounded-xl text-xs font-bold transition-all shadow-md"
+              href={getUpiUrl('any')}
+              onClick={() => handleUpiClick('any')}
+              className="inline-flex items-center justify-center gap-2 w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white py-3 px-4 rounded-xl text-sm font-black transition-all shadow-md transform hover:scale-[1.01]"
             >
-              <span>⚡</span> UPI App से सीधे Pay करें (GPay / PhonePe / Paytm)
+              <span>⚡</span> {totalPayable > 0 ? `₹ ${totalPayable.toLocaleString('en-IN')} UPI App से Pay करें →` : 'UPI App से सीधे Pay करें (GPay / PhonePe / Paytm)'}
             </a>
+
+            <div className="grid grid-cols-3 gap-2 pt-0.5">
+              <a
+                href={getUpiUrl('phonepe')}
+                onClick={() => handleUpiClick('phonepe')}
+                className="py-1.5 px-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold text-[11px] flex items-center justify-center gap-1 transition-all"
+              >
+                <span>🟣</span> PhonePe
+              </a>
+              <a
+                href={getUpiUrl('gpay')}
+                onClick={() => handleUpiClick('gpay')}
+                className="py-1.5 px-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold text-[11px] flex items-center justify-center gap-1 transition-all"
+              >
+                <span>🔵</span> GPay
+              </a>
+              <a
+                href={getUpiUrl('paytm')}
+                onClick={() => handleUpiClick('paytm')}
+                className="py-1.5 px-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 font-bold text-[11px] flex items-center justify-center gap-1 transition-all"
+              >
+                <span>🔷</span> Paytm
+              </a>
+            </div>
           </div>
         </div>
 
