@@ -47,7 +47,11 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Mera Kameti server port ${PORT} pe chal raha hai`);
-  console.log(`📱 Admin: 0000000000 / admin123`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Mera Kameti server port ${PORT} pe chal raha hai`);
+    console.log(`📱 Admin: 0000000000 / admin123`);
+  });
+}
+
+module.exports = app;

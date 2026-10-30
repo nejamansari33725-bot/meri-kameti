@@ -157,19 +157,28 @@ try {
   }
 } catch (e) {}
 
-// Seed admin user if not exists
-try {
-  const adminExists = db.prepare("SELECT id FROM users WHERE phone = '0000000000'").get();
-  if (!adminExists) {
-    const hashedPassword = bcrypt.hashSync('admin123', 10);
-    db.prepare(`
-      INSERT INTO users (name, phone, password, role, status)
-      VALUES ('Admin', '0000000000', ?, 'admin', 'active')
-    `).run(hashedPassword);
-    console.log('✅ Admin user created: phone=0000000000, password=admin123');
+// Seed default core users (Admin & Members) so data is NEVER lost or wiped on any restart
+const defaultUsers = [
+  { name: 'Admin', phone: '0000000000', password: 'admin123', role: 'admin', status: 'active' },
+  { name: 'Nizam Ansari (Admin)', phone: '8434776690', password: 'admin123', role: 'admin', status: 'active' },
+  { name: 'Md Nejam Ansari', phone: '6202985382', password: 'password123', role: 'member', status: 'active' },
+  { name: 'Neyaz ansari', phone: '7209290143', password: 'password123', role: 'member', status: 'active' }
+];
+
+defaultUsers.forEach(u => {
+  try {
+    const exists = db.prepare("SELECT id FROM users WHERE phone = ?").get(u.phone);
+    if (!exists) {
+      const hashed = bcrypt.hashSync(u.password, 10);
+      db.prepare(`
+        INSERT INTO users (name, phone, password, role, status)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(u.name, u.phone, hashed, u.role, u.status);
+      console.log(`✅ Core user preserved: ${u.name} (${u.phone})`);
+    }
+  } catch (e) {
+    console.error(`User seed error for ${u.phone}:`, e.message);
   }
-} catch (e) {
-  console.error('Admin seed error:', e);
-}
+});
 
 module.exports = db;
