@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: mera-kameti
+    env: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && cd frontend && npm install && npm run build
+    startCommand: node backend/server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        value: mera_kameti_secret_key_2024
+      - key: BACKUP_SECRET
+        value: mera_kameti_backup_secret_9988

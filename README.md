@@ -2,6 +2,8 @@
 
 BC/Chit Fund Committee Management System
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/nejamansari33725-bot/meri-kameti)
+
 ---
 
 ## 🚀 Setup & Run Karne Ka Tarika

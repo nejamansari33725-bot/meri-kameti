@@ -1,0 +1,119 @@
+﻿{
+    "app":  "Mera Kameti",
+    "version":  "1.0.0",
+    "timestamp":  "2026-10-30T05:43:26.111Z",
+    "counts":  {
+                   "users":  4,
+                   "payments":  0,
+                   "committee_rounds":  0,
+                   "settings":  6,
+                   "late_fines":  0,
+                   "payout_requests":  0,
+                   "notifications":  0
+               },
+    "data":  {
+                 "users":  [
+                               {
+                                   "id":  1,
+                                   "name":  "Admin",
+                                   "phone":  "0000000000",
+                                   "email":  null,
+                                   "password":  "$2a$10$Il/6/Ngd2Auam2cxdgmHze45jnV3zfLhCMvGSrCKpoYVOASECfZxW",
+                                   "role":  "admin",
+                                   "status":  "active",
+                                   "created_at":  "2026-10-30 05:42:53",
+                                   "profile_photo":  null,
+                                   "custom_credit":  null,
+                                   "custom_debit":  null,
+                                   "custom_late_fine":  null,
+                                   "custom_late_fine_due":  null
+                               },
+                               {
+                                   "id":  2,
+                                   "name":  "Nizam Ansari (Admin)",
+                                   "phone":  "8434776690",
+                                   "email":  null,
+                                   "password":  "$2a$10$1NTRNLBaD/.i4O.rL8lD8.SHS.7ANP46R8ksIGXIaQYJMmiyWmOJS",
+                                   "role":  "admin",
+                                   "status":  "active",
+                                   "created_at":  "2026-10-30 05:42:53",
+                                   "profile_photo":  null,
+                                   "custom_credit":  null,
+                                   "custom_debit":  null,
+                                   "custom_late_fine":  null,
+                                   "custom_late_fine_due":  null
+                               },
+                               {
+                                   "id":  3,
+                                   "name":  "Md Nejam Ansari",
+                                   "phone":  "6202985382",
+                                   "email":  null,
+                                   "password":  "$2a$10$SPwQMMO9FhJyIlULxMwf3eEbTrPTY77fHgu1Wgz5/H4ApzzwePIee",
+                                   "role":  "member",
+                                   "status":  "active",
+                                   "created_at":  "2026-10-30 05:42:53",
+                                   "profile_photo":  null,
+                                   "custom_credit":  null,
+                                   "custom_debit":  null,
+                                   "custom_late_fine":  null,
+                                   "custom_late_fine_due":  null
+                               },
+                               {
+                                   "id":  4,
+                                   "name":  "Neyaz ansari",
+                                   "phone":  "7209290143",
+                                   "email":  null,
+                                   "password":  "$2a$10$AdVmqTVcP/gam8nX4r9tgeD20ilw3LovfrTwrnZDHCE2IGo0BIkNm",
+                                   "role":  "member",
+                                   "status":  "active",
+                                   "created_at":  "2026-10-30 05:42:53",
+                                   "profile_photo":  null,
+                                   "custom_credit":  null,
+                                   "custom_debit":  null,
+                                   "custom_late_fine":  null,
+                                   "custom_late_fine_due":  null
+                               }
+                           ],
+                 "payments":  [
+
+                              ],
+                 "committee_rounds":  [
+
+                                      ],
+                 "settings":  [
+                                  {
+                                      "key":  "committee_name",
+                                      "value":  "Mera Kameti"
+                                  },
+                                  {
+                                      "key":  "upi_id",
+                                      "value":  "ansarinizam57970-2@oksbi"
+                                  },
+                                  {
+                                      "key":  "upi_name",
+                                      "value":  "Nizam Ansari"
+                                  },
+                                  {
+                                      "key":  "qr_code_url",
+                                      "value":  "/upi-qr.png"
+                                  },
+                                  {
+                                      "key":  "default_late_fine",
+                                      "value":  "0"
+                                  },
+                                  {
+                                      "key":  "whatsapp_group_link",
+                                      "value":  "https://chat.whatsapp.com/JbU280YDQbh6cbRBbRjY3l?s=cl\u0026p=a\u0026mlu=4\u0026ilr=4\u0026iam=2"
+                                  }
+                              ],
+                 "late_fines":  [
+
+                                ],
+                 "payout_requests":  [
+
+                                     ],
+                 "notifications":  [
+
+                                   ]
+             }
+}
