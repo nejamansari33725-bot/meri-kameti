@@ -78,11 +78,25 @@ export default function SubmitPayment() {
     }
   }
 
-  // Check if installment is already submitted/paid for the selected month & year
-  const existingInstallmentPayment = myStatement?.payments?.find(
-    p => p.month === form.month && p.year === form.year && p.amount > 0 && p.status !== 'rejected'
+  // 15-Day Rule: Check when member last submitted an installment
+  const lastInstallmentPayment = myStatement?.payments?.find(
+    p => p.amount > 0 && p.status !== 'rejected'
   )
-  const isInstallmentAlreadyPaid = Boolean(existingInstallmentPayment)
+
+  let daysSinceLastKisht = null
+  let daysRemaining = 0
+  let isKishtLockedBy15Days = false
+
+  if (lastInstallmentPayment?.submitted_at) {
+    const lastDate = new Date(lastInstallmentPayment.submitted_at)
+    const nowTime = new Date()
+    const diffMs = nowTime.getTime() - lastDate.getTime()
+    daysSinceLastKisht = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    if (daysSinceLastKisht < 15) {
+      isKishtLockedBy15Days = true
+      daysRemaining = 15 - daysSinceLastKisht
+    }
+  }
 
   const installment = parseFloat(form.installment_amount) || 0
   const fine = parseFloat(form.late_fine) || 0
@@ -96,8 +110,11 @@ export default function SubmitPayment() {
       return toast.error('कृपया किश्त, लेट फाइन या उठाया पैसा वापसी में से कोई एक राशि भरें। / Please enter an amount.')
     }
 
-    if (isInstallmentAlreadyPaid && installment > 0) {
-      return toast.error(`इस माह की किश्त पहले ही जमा है। कृपया किश्त 0 रखें और लेट फाइन या उठाया हुआ पैसा वापस जमा करें।`)
+    if (isKishtLockedBy15Days && installment > 0) {
+      const formattedDate = new Date(lastInstallmentPayment.submitted_at).toLocaleDateString('hi-IN', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      })
+      return toast.error(`आपकी पिछली किश्त (${formattedDate}) को जमा हुई थी। कमिटी नियम के अनुसार कम से कम 15 दिन बाद ही अगली किश्त जमा कर सकते हैं (बाकी दिन: ${daysRemaining} दिन)।`)
     }
 
     setLoading(true)
@@ -156,7 +173,7 @@ export default function SubmitPayment() {
           <span>💳</span> किश्त एवं लेट फाइन भुगतान (Pay Installment / Fine / Return)
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          कमिटी किश्त (1 बार), लेट फाइन या उठाया हुआ पैसा (जितनी बार चाहें) जमा करें
+          कमिटी किश्त (न्यूनतम 15 दिन के अंतराल पर), लेट फाइन या उठाया हुआ पैसा (जितनी बार चाहें) जमा करें
         </p>
       </div>
 
@@ -286,18 +303,31 @@ export default function SubmitPayment() {
             </div>
           </div>
 
-          {/* Alert if Installment Already Paid for this Month */}
-          {isInstallmentAlreadyPaid && (
-            <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 flex items-start gap-2">
-              <span className="text-base">✅</span>
+          {/* 15 Days Gap Rule Alert Banner */}
+          {isKishtLockedBy15Days ? (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+              <span className="text-xl">⏳</span>
               <div>
-                <strong>इस महीने ({MONTH_NAMES[form.month]} {form.year}) की किश्त पहले ही जमा हो चुकी है!</strong>
-                <p className="text-[11px] text-emerald-700 mt-0.5">
-                  किश्त महीने में केवल 1 बार जमा होती है। लेकिन आप <strong>उठाया हुआ पैसा वापस (Repayment)</strong> या <strong>लेट फाइन (Late Fine)</strong> महीने में जितनी बार चाहें जमा कर सकते हैं।
+                <strong>किश्त का 15 दिन का अंतराल (15 Days Rule):</strong>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  आपकी पिछली किश्त {new Date(lastInstallmentPayment.submitted_at).toLocaleDateString('hi-IN', { day: '2-digit', month: 'short', year: 'numeric' })} को जमा हुई थी। कमिटी नियम के अनुसार कम से कम 15 दिन बाद यानी <strong>{daysRemaining} दिन बाद</strong> अगली किश्त जमा कर सकेंगे।
+                </p>
+                <p className="text-[11px] text-slate-600 mt-1 font-medium">
+                  (नोट: आप <strong>लेट फाइन</strong> या <strong>उठाया हुआ पैसा वापसी</strong> अभी भी जमा कर सकते हैं।)
                 </p>
               </div>
             </div>
-          )}
+          ) : lastInstallmentPayment ? (
+            <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 flex items-start gap-2">
+              <span className="text-base">✅</span>
+              <div>
+                <strong>नई किश्त जमा के लिए उपलब्ध! (Eligible for Next Installment)</strong>
+                <p className="text-[11px] text-emerald-700 mt-0.5">
+                  आपकी पिछली किश्त जमा हुए 15 दिन से अधिक समय हो चुका है। आप नई किश्त जमा कर सकते हैं।
+                </p>
+              </div>
+            </div>
+          ) : null}
 
           {/* Active Late Fine Due Alert Banner */}
           {myStatement?.late_fine_due > 0 && (
@@ -327,20 +357,22 @@ export default function SubmitPayment() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200">
             <div>
               <label className="block text-xs font-bold text-emerald-800 uppercase mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1">💵 महीने की किश्त / Installment (₹)</span>
-                <span className="text-[10px] text-slate-400 font-normal">माह में 1 बार</span>
+                <span className="flex items-center gap-1">💵 कमिटी किश्त / Installment (₹)</span>
+                <span className="text-[10px] text-slate-500 font-semibold">न्यूनतम 15 दिन अंतराल</span>
               </label>
               <input
                 type="number"
-                className={`input font-bold text-lg bg-white ${isInstallmentAlreadyPaid ? 'text-slate-400 bg-slate-100 cursor-not-allowed' : 'text-slate-900'}`}
-                placeholder={isInstallmentAlreadyPaid ? 'किश्त पहले ही जमा है (0)' : 'e.g. 2000, 5000'}
+                className={`input font-bold text-lg bg-white ${isKishtLockedBy15Days ? 'text-slate-400 bg-slate-100 cursor-not-allowed' : 'text-slate-900'}`}
+                placeholder={isKishtLockedBy15Days ? `अगली किश्त ${daysRemaining} दिन बाद (Locked)` : 'e.g. 500, 1000, 2000'}
                 min="0"
-                disabled={isInstallmentAlreadyPaid}
-                value={isInstallmentAlreadyPaid ? '0' : form.installment_amount}
+                disabled={isKishtLockedBy15Days}
+                value={isKishtLockedBy15Days ? '0' : form.installment_amount}
                 onChange={e => setForm({ ...form, installment_amount: e.target.value })}
               />
               <p className="text-[11px] text-slate-500 mt-1">
-                {isInstallmentAlreadyPaid ? '✓ किश्त जमा हो चुकी है' : 'नियमित मासिक किश्त (Only once a month)'}
+                {isKishtLockedBy15Days 
+                  ? `🔒 15 दिन का लॉक सक्रिय (${daysRemaining} दिन शेष)` 
+                  : '✓ न्यूनतम 15 दिन बाद नई किश्त जमा करने के लिए उपलब्ध'}
               </p>
             </div>
 

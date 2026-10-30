@@ -485,7 +485,7 @@ export default function MemberDashboard() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                 thisMonthPayment.status === 'approved' ? 'bg-emerald-600 text-white' :
                 thisMonthPayment.status === 'pending' ? 'bg-amber-600 text-white' :
@@ -493,6 +493,12 @@ export default function MemberDashboard() {
               }`}>
                 {thisMonthPayment.status}
               </span>
+              <Link
+                to="/pay"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1"
+              >
+                <span>+</span> किश्त / भुगतान
+              </Link>
             </div>
           </div>
         ) : (

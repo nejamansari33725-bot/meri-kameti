@@ -98,16 +98,31 @@ router.post('/', authMiddleware, upload.single('screenshot'), (req, res) => {
   const screenshotPath = req.file ? `/uploads/${req.file.filename}` : null;
   const initialStatus = req.user.role === 'admin' ? 'approved' : 'pending';
 
-  // 1. Kisht (installment) check: only allowed ONCE per month!
-  if (installment > 0) {
-    const existingKisht = db.prepare(
-      'SELECT id, amount, status FROM payments WHERE user_id = ? AND month = ? AND year = ? AND amount > 0 AND status != ?'
-    ).get(req.user.id, parseInt(month), parseInt(year), 'rejected');
+  // 1. Kisht (installment) check: Member can pay again after a minimum of 15 days from their previous installment!
+  if (installment > 0 && req.user.role !== 'admin') {
+    const lastKisht = db.prepare(`
+      SELECT id, amount, submitted_at, status, month, year 
+      FROM payments 
+      WHERE user_id = ? AND amount > 0 AND status != 'rejected'
+      ORDER BY submitted_at DESC, id DESC 
+      LIMIT 1
+    `).get(req.user.id);
 
-    if (existingKisht) {
-      return res.status(400).json({
-        error: `इस महीने (${month}/${year}) की किश्त (₹${existingKisht.amount}) पहले से ही जमा/पेंडिंग है। किश्त महीने में केवल एक बार जमा हो सकती है। यदि आप लेट फाइन या उठाया हुआ पैसा वापस जमा करना चाहते हैं, तो किश्त को 0 रखें।`
-      });
+    if (lastKisht && lastKisht.submitted_at) {
+      const lastDate = new Date(lastKisht.submitted_at);
+      const now = new Date();
+      const diffMs = now.getTime() - lastDate.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 15) {
+        const daysRemaining = 15 - diffDays;
+        const formattedLastDate = lastDate.toLocaleDateString('hi-IN', {
+          day: '2-digit', month: 'short', year: 'numeric'
+        });
+        return res.status(400).json({
+          error: `आपकी पिछली किश्त (₹${lastKisht.amount}) दिनांक ${formattedLastDate} को जमा हुई थी। कमिटी नियम के अनुसार कम से कम 15 दिन बाद ही अगली किश्त जमा कर सकते हैं। कृपया ${daysRemaining} दिन बाद पुनः प्रयास करें।`
+        });
+      }
     }
   }
 
