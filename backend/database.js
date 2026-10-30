@@ -162,12 +162,27 @@ try {
   }
 } catch (e) {}
 
-// Seed default core users (Admin & Members) so data is NEVER lost or wiped on any restart
+// Clean up old default admin so 8434776690 is the SOLE Admin
+try {
+  db.prepare("DELETE FROM users WHERE phone = '0000000000'").run();
+} catch (e) {}
+
+// Sole Admin is 8434776690 (MD NEJAM ANSARI)
+try {
+  const admin8434 = db.prepare("SELECT id FROM users WHERE phone = '8434776690'").get();
+  if (admin8434) {
+    db.prepare("UPDATE users SET name = 'MD NEJAM ANSARI', role = 'admin', status = 'active' WHERE phone = '8434776690'").run();
+  } else {
+    const hashed = bcrypt.hashSync('admin123', 10);
+    db.prepare("INSERT INTO users (name, phone, password, role, status) VALUES ('MD NEJAM ANSARI', '8434776690', ?, 'admin', 'active')").run(hashed);
+  }
+} catch (e) {}
+
+// Seed members
 const defaultUsers = [
-  { name: 'Admin', phone: '0000000000', password: 'admin123', role: 'admin', status: 'active' },
-  { name: 'Nizam Ansari (Admin)', phone: '8434776690', password: 'admin123', role: 'admin', status: 'active' },
-  { name: 'Md Nejam Ansari', phone: '6202985382', password: 'password123', role: 'member', status: 'active' },
-  { name: 'Neyaz ansari', phone: '7209290143', password: 'password123', role: 'member', status: 'active' }
+  { name: 'MD NEJAM ANSARI', phone: '8434776690', password: 'admin123', role: 'admin', status: 'active' },
+  { name: 'Neyaz ansari', phone: '7209290143', password: 'password123', role: 'member', status: 'active' },
+  { name: 'Md Nejam Ansari', phone: '6202985382', password: 'password123', role: 'member', status: 'active' }
 ];
 
 defaultUsers.forEach(u => {
