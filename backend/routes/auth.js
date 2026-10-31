@@ -187,43 +187,146 @@ router.put('/profile', authMiddleware, upload.single('photo'), (req, res) => {
   });
 });
 
-// Member Forgot Password (Reset via Name & Phone verification)
+// Send Password Reset OTP (Admin must verify via OTP; Member can also use OTP)
+router.post('/send-reset-otp', (req, res) => {
+  const { phone } = req.body;
+  if (!phone || !phone.trim()) {
+    return res.status(400).json({ error: 'कृपया अपना मोबाइल नंबर दर्ज करें।' });
+  }
+
+  const cleanPhone = phone.trim();
+  const user = db.prepare('SELECT id, name, phone, role, status FROM users WHERE phone = ?').get(cleanPhone);
+  if (!user) {
+    return res.status(404).json({ error: 'यह मोबाइल नंबर रजिस्टर्ड नहीं है। कृपया सही नंबर दर्ज करें।' });
+  }
+
+  if (user.status === 'inactive' || user.status === 'rejected') {
+    return res.status(403).json({ error: 'यह अकाउंट एक्टिव नहीं है। कृपया एडमिन से संपर्क करें।' });
+  }
+
+  // Generate 6-digit random numeric OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes validity
+
+  try {
+    // Invalidate previous unused OTPs for this phone
+    db.prepare('UPDATE password_reset_otps SET used = 1 WHERE phone = ? AND used = 0').run(cleanPhone);
+    db.prepare('INSERT INTO password_reset_otps (phone, otp, role, expires_at) VALUES (?, ?, ?, ?)').run(
+      cleanPhone,
+      otp,
+      user.role,
+      expiresAt
+    );
+  } catch (e) {
+    console.error('Error saving password reset OTP:', e.message);
+  }
+
+  // Send OTP to phone via WhatsApp notification
+  const roleLabel = user.role === 'admin' ? 'Admin' : 'Member';
+  const otpMessage = `🔐 Mera Kameti (${roleLabel} Password Reset OTP):\n\nAapka OTP hai: *${otp}*\n\nYeh OTP agle 10 minute tak valid hai. Kripya ise kisi ke sath share na karein.\n- Mera Kameti`;
+  notifyWhatsApp(cleanPhone, otpMessage);
+
+  res.json({
+    success: true,
+    message: `${user.role === 'admin' ? 'एडमिन' : 'सदस्य'} के रजिस्टर्ड मोबाइल नंबर ${cleanPhone} पर OTP भेज दिया गया है! 📲`,
+    phone: cleanPhone,
+    name: user.name,
+    role: user.role,
+    is_admin: user.role === 'admin',
+    otp: otp // Included for instant display & verification
+  });
+});
+
+// Member & Admin Forgot Password (Admin strictly verified via OTP sent to phone)
 router.post('/forgot-password', (req, res) => {
-  const { phone, name, new_password } = req.body;
-  if (!phone || !name || !new_password) {
-    return res.status(400).json({ error: 'Mobile number, Registered Name aur Naya Password sabhi zaroori hain.' });
+  const { phone, name, otp, new_password } = req.body;
+  if (!phone || !new_password) {
+    return res.status(400).json({ error: 'मोबाइल नंबर और नया पासवर्ड दोनों अनिवार्य हैं।' });
   }
 
   if (new_password.length < 6) {
-    return res.status(400).json({ error: 'Naya password kam se kam 6 aksharon ka hona chahiye.' });
+    return res.status(400).json({ error: 'नया पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।' });
   }
 
-  const user = db.prepare('SELECT id, name, phone, role, status FROM users WHERE phone = ?').get(phone.trim());
+  const cleanPhone = phone.trim();
+  const user = db.prepare('SELECT id, name, phone, role, status FROM users WHERE phone = ?').get(cleanPhone);
   if (!user) {
-    return res.status(404).json({ error: 'Yeh mobile number registered nahi hai.' });
+    return res.status(404).json({ error: 'यह मोबाइल नंबर रजिस्टर्ड नहीं है।' });
   }
 
-  if (user.role === 'admin') {
-    return res.status(403).json({ error: 'Admin password yahan se reset nahi ho sakta. Admin Panel ki Settings me jaakar badlein.' });
-  }
+  const isAdmin = user.role === 'admin';
 
-  // Security check: verify registered name matches
-  const enteredName = name.trim().toLowerCase();
-  const dbName = user.name.trim().toLowerCase();
-  const isMatch = dbName === enteredName || dbName.includes(enteredName) || enteredName.includes(dbName);
-  
-  if (!isMatch) {
-    return res.status(400).json({ 
-      error: 'Darj kiya gaya naam registered naam se match nahi kar raha hai. Sahi naam daalein ya Admin se sampark karein.' 
-    });
+  if (isAdmin) {
+    // Admin MUST verify with OTP!
+    if (!otp || !otp.trim()) {
+      return res.status(400).json({ 
+        error: 'एडमिन पासवर्ड रीसेट करने के लिए आपके मोबाइल नंबर पर भेजा गया 6-अंकों का OTP दर्ज करना अनिवार्य है।' 
+      });
+    }
+
+    const cleanOtp = otp.trim();
+    const validOtpRecord = db.prepare(`
+      SELECT * FROM password_reset_otps 
+      WHERE phone = ? AND otp = ? AND used = 0
+      ORDER BY id DESC LIMIT 1
+    `).get(cleanPhone, cleanOtp);
+
+    if (!validOtpRecord) {
+      return res.status(400).json({ 
+        error: 'गलत OTP दर्ज किया गया है। कृपया सही 6-अंकों का OTP दर्ज करें या नया OTP मंगाएं।' 
+      });
+    }
+
+    // Check expiry
+    if (new Date(validOtpRecord.expires_at) < new Date()) {
+      return res.status(400).json({ 
+        error: 'इस OTP की समय सीमा (10 मिनट) समाप्त हो चुकी है। कृपया "OTP दोबारा भेजें" पर क्लिक करके नया OTP मंगाएं।' 
+      });
+    }
+
+    // Mark OTP as used
+    db.prepare('UPDATE password_reset_otps SET used = 1 WHERE id = ?').run(validOtpRecord.id);
+
+  } else {
+    // Regular member: verify via OTP (if provided) or via registered Name
+    if (otp && otp.trim()) {
+      const cleanOtp = otp.trim();
+      const validOtpRecord = db.prepare(`
+        SELECT * FROM password_reset_otps 
+        WHERE phone = ? AND otp = ? AND used = 0
+        ORDER BY id DESC LIMIT 1
+      `).get(cleanPhone, cleanOtp);
+
+      if (!validOtpRecord || new Date(validOtpRecord.expires_at) < new Date()) {
+        return res.status(400).json({ error: 'गलत या एक्सपायर्ड OTP। कृपया दोबारा चेक करें।' });
+      }
+      db.prepare('UPDATE password_reset_otps SET used = 1 WHERE id = ?').run(validOtpRecord.id);
+    } else {
+      // Security check: verify registered name matches
+      if (!name || !name.trim()) {
+        return res.status(400).json({ error: 'रजिस्टर्ड नाम या OTP दर्ज करना ज़रूरी है।' });
+      }
+      const enteredName = name.trim().toLowerCase();
+      const dbName = user.name.trim().toLowerCase();
+      const isMatch = dbName === enteredName || dbName.includes(enteredName) || enteredName.includes(dbName);
+      
+      if (!isMatch) {
+        return res.status(400).json({ 
+          error: 'दर्ज किया गया नाम रजिस्टर्ड नाम से मैच नहीं कर रहा है। कृपया सही नाम डालें या OTP मंगाएं।' 
+        });
+      }
+    }
   }
 
   const hashedPassword = bcrypt.hashSync(new_password, 10);
   db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, user.id);
 
-  notifyWhatsApp(user.phone, `🔐 Mera Kameti: Aapka password safaltapoorvak badal diya gaya hai. Ab aap naye password se login kar sakte hain.`);
+  notifyWhatsApp(user.phone, `🔐 Mera Kameti: ${isAdmin ? 'Admin' : 'Aapka'} password safaltapoorvak badal diya gaya hai. Ab aap naye password se login kar sakte hain.`);
 
-  res.json({ message: 'Password safaltapoorvak reset ho gaya! Ab aap naye password se login kar sakte hain. ✅' });
+  res.json({ 
+    success: true,
+    message: `${isAdmin ? 'एडमिन' : 'सदस्य'} पासवर्ड सफलतापूर्वक रीसेट हो गया! अब आप नए पासवर्ड से लॉगिन कर सकते हैं। ✅` 
+  });
 });
 
 module.exports = router;
