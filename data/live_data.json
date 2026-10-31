@@ -53,7 +53,7 @@
       "name": "Ansari",
       "phone": "9939218425",
       "email": null,
-      "password": "$2a$10$HYp57ghI1xsEbFxaMscj2e75B9ph/.vXUH/Fdq.bDiwgsDQSlr0QW",
+      "password": "$2a$10$VS6UVtRjO1BZGCisPmIjCuLnVdH4mQnDMf3CCNgaVcIzSXyKsIwVC",
       "role": "member",
       "status": "active",
       "profile_photo": "/uploads/avatar_1793378741050.jpg",
@@ -323,5 +323,5 @@
       "created_at": "2026-10-30 18:08:35"
     }
   ],
-  "exported_at": "2026-10-31T12:43:48.605Z"
+  "exported_at": "2026-10-31T12:44:09.688Z"
 }
