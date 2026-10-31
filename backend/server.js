@@ -28,6 +28,22 @@ app.use(async (req, res, next) => {
   }
 });
 
+// Await GitHub commit persistence on write requests
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    const originalJson = res.json.bind(res);
+    res.json = async function (data) {
+      try {
+        await db.syncToGitHub();
+      } catch (err) {
+        console.warn('GitHub write sync error:', err.message);
+      }
+      return originalJson(data);
+    };
+  }
+  next();
+});
+
 // Serve static uploads
 app.use('/uploads', express.static(uploadsDir));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -80,6 +96,7 @@ app.get(['/api/health', '/health'], (req, res) => {
     message: 'Mera Kameti chal raha hai! 🟢',
     platform: 'Vercel Serverless + GitHub Storage',
     dbReady: db.isReady,
+    hasGhToken: !!(process.env.GITHUB_TOKEN || db.hasToken),
     admin: 'MD NEJAM ANSARI (8434776690)'
   });
 });

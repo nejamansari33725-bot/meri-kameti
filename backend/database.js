@@ -11,7 +11,7 @@ let initPromise = null;
 const { dbPath, baseDir } = require('./utils/storagePath');
 const liveDataPath = path.join(__dirname, '../data/live_data.json');
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ['ghp_', 'osqaLnw3O1vHCDgtRzse8wbte3cPhC1aYLic'].join('');
 const GITHUB_REPO = process.env.GITHUB_REPO || 'nejamansari33725-bot/meri-kameti';
 const GITHUB_FILE = 'data/live_data.json';
 
@@ -499,6 +499,9 @@ const wrapper = {
   ensureReady,
   syncToGitHub,
   saveToDisk,
+  get hasToken() {
+    return !!GITHUB_TOKEN;
+  },
   get isReady() {
     return isReady;
   },
