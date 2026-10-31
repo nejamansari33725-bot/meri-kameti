@@ -445,10 +445,10 @@ export default function Members() {
               </div>
 
               {/* Calculated Net Preview */}
-              <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-200 flex justify-between items-center text-xs">
-                <span className="font-bold text-indigo-900">नया नेट बैलेंस (Net Balance Preview):</span>
-                <span className="font-extrabold text-sm text-indigo-700">
-                  ₹ {((parseFloat(editCredit || 0) + parseFloat(editLateFine || 0)) - parseFloat(editDebit || 0)).toLocaleString('en-IN')}
+              <div className="p-3 bg-green-50/70 rounded-xl border border-green-200 flex justify-between items-center text-xs">
+                <span className="font-bold text-green-900">नया नेट बैलेंस (Net Balance Preview):</span>
+                <span className="font-extrabold text-sm text-green-700">
+                  + ₹ {(parseFloat(editCredit || 0)).toLocaleString('en-IN')}
                 </span>
               </div>
 

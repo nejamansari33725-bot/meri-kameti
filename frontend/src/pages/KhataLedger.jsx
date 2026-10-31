@@ -281,13 +281,9 @@ export default function KhataLedger() {
                         </span>
                       </td>
                       <td className="py-3.5 px-3 text-right">
-                        {m.net_balance > 0 ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                            + ₹{m.net_balance.toLocaleString('en-IN')}
-                          </span>
-                        ) : m.net_balance < 0 ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                            - ₹{Math.abs(m.net_balance).toLocaleString('en-IN')}
+                        {(m.total_credit || 0) > 0 ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
+                            + ₹{m.total_credit?.toLocaleString('en-IN')}
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
@@ -415,10 +411,10 @@ export default function KhataLedger() {
                     <span className="text-[10px] text-red-700 font-semibold uppercase block">कुल उठाया</span>
                     <span className="text-base font-bold text-red-700">₹ {statement.total_debit?.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="p-2.5 bg-indigo-50 rounded-xl border border-indigo-200 text-center col-span-2 sm:col-span-1">
-                    <span className="text-[10px] text-indigo-700 font-semibold uppercase block">बाकी शेष</span>
-                    <span className={`text-base font-bold ${statement.net_balance >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>
-                      ₹ {statement.net_balance?.toLocaleString('en-IN')}
+                  <div className="p-2.5 bg-green-50 rounded-xl border border-green-200 text-center col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-green-700 font-semibold uppercase block">नेट बैलेंस (किश्त जमा)</span>
+                    <span className="text-base font-bold text-green-700">
+                      + ₹ {(statement.total_credit || 0).toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>

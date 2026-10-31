@@ -332,18 +332,16 @@ export default function MemberDashboard() {
             </div>
 
             {/* Net Balance Card */}
-            <div className="p-4 bg-gradient-to-br from-indigo-500/10 via-indigo-50 to-blue-50 rounded-2xl border border-indigo-200 shadow-sm">
+            <div className="p-4 bg-gradient-to-br from-green-500/10 via-green-50 to-emerald-50 rounded-2xl border border-green-200 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-indigo-800 uppercase tracking-wider">नेट स्थिति / Net Balance</span>
-                <span className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">⚖️</span>
+                <span className="text-xs font-bold text-green-800 uppercase tracking-wider">नेट बैलेंस (किश्त जमा)</span>
+                <span className="w-7 h-7 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-sm">💰</span>
               </div>
-              <p className={`text-2xl font-black mt-2 ${
-                myStatement.net_balance >= 0 ? 'text-indigo-700' : 'text-rose-700'
-              }`}>
-                ₹ {myStatement.net_balance?.toLocaleString('en-IN') || 0}
+              <p className="text-2xl font-black mt-2 text-green-700">
+                + ₹ {(myStatement.total_credit || 0).toLocaleString('en-IN')}
               </p>
-              <p className="text-[11px] text-indigo-600 mt-1 font-medium">
-                {myStatement.net_balance >= 0 ? 'आप कमिटी में जमाकर्ता हैं' : 'आपने कमिटी उठा ली है'}
+              <p className="text-[11px] text-green-600 mt-1 font-medium">
+                कुल स्वीकृत किश्तें (महीने का किश्त)
               </p>
             </div>
           </div>

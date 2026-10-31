@@ -277,14 +277,14 @@ export default function SubmitPayment() {
 
             {/* 4. Net Khata */}
             <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
-              <span className="text-[11px] text-indigo-300 font-bold uppercase block">
-                ⚖️ नेट बैलेंस / Net
+              <span className="text-[11px] text-emerald-300 font-bold uppercase block">
+                💰 नेट बैलेंस / Net
               </span>
               <p className="text-lg sm:text-xl font-black text-white mt-1">
-                ₹ {myStatement.net_balance?.toLocaleString('en-IN') || 0}
+                + ₹ {(myStatement.total_credit || 0).toLocaleString('en-IN')}
               </p>
               <p className="text-[10px] text-slate-300 mt-0.5">
-                {myStatement.net_balance >= 0 ? 'कमिटी में जमा' : 'कमिटी से लिया'}
+                कुल किश्त जमा राशि
               </p>
             </div>
           </div>

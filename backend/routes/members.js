@@ -34,7 +34,7 @@ function getMembersWithLedger() {
       COALESCE(r.rounds_won_info, '') as rounds_won_info,
       COALESCE(pend.pending_payment_count, 0) as pending_payment_count,
       COALESCE(pend.pending_payment_amount, 0) as pending_payment_amount,
-      ((COALESCE(u.custom_credit, p.total_credit, 0) + COALESCE(u.custom_late_fine, p.total_late_fine, 0)) - COALESCE(u.custom_debit, MAX(0, COALESCE(r.total_debit, 0) - COALESCE(p.total_repayment, 0)), 0)) as net_balance
+      COALESCE(u.custom_credit, p.total_credit, 0) as net_balance
     FROM users u
     LEFT JOIN (
       SELECT 
@@ -268,7 +268,7 @@ router.get('/:id/statement', authMiddleware, (req, res) => {
       unpaid_fines: unpaidFines,
       total_debit: totalDebit,
       total_repayment: totalRepayment,
-      net_balance: (totalCredit + totalLateFine) - totalDebit,
+      net_balance: totalCredit,
       payments,
       roundsWon
     }
