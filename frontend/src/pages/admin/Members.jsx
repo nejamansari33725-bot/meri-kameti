@@ -96,7 +96,7 @@ export default function Members() {
       const mPhone = res.data?.data?.phone || fineModal.phone
       const amt = res.data?.data?.amount || fineAmount
       const rsn = fineReason || 'समय पर किश्त जमा न करने पर'
-      const msg = `⚠️ *MERA KAMETI — लेट फाइन सूचना (Late Fine Notice)* ⚠️\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${mName}*\n⚡ लेट फाइन राशि: *₹${amt}*\n📅 महीना: ${MONTH_NAMES[fineMonth]} ${fineYear}\n📝 कारण: ${rsn}\n━━━━━━━━━━━━━━━━━━━━\nकृपया पोर्टल पर जाकर लेट फाइन का भुगतान करें:\n👉 लाइव पोर्टल: https://merakameti.up.railway.app/pay\n💬 WhatsApp Group: ${whatsappLink}`
+      const msg = `⚠️ *MERA KAMETI — लेट फाइन सूचना (Late Fine Notice)* ⚠️\n━━━━━━━━━━━━━━━━━━━━\n👤 सदस्य: *${mName}*\n⚡ लेट fine राशि: *₹${amt}*\n📅 महीना: ${MONTH_NAMES[fineMonth]} ${fineYear}\n📝 कारण: ${rsn}\n━━━━━━━━━━━━━━━━━━━━\nकृपया पोर्टल पर जाकर लेट फाइन का भुगतान करें:\n👉 लाइव पोर्टल: https://merakameti.vercel.app/pay\n💬 WhatsApp Group: ${whatsappLink}`
       if (mPhone) {
         const cleanPhone = String(mPhone).replace(/[^0-9]/g, '')
         const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone

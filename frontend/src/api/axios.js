@@ -1,8 +1,8 @@
 import axios from 'axios'
 
-export const API_ORIGIN = (typeof window !== 'undefined' && window.location.hostname.includes('railway.app'))
+export const API_ORIGIN = (typeof window !== 'undefined' && (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost')))
   ? ''
-  : (import.meta.env.VITE_API_URL || 'https://merakameti.up.railway.app')
+  : (import.meta.env.VITE_API_URL || '')
 
 export const getImageUrl = (path) => {
   if (!path) return ''

@@ -1,50 +1,88 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 if (process.env.NODE_ENV !== 'production') {
   try { require('dotenv').config(); } catch(e) { /* ok */ }
 }
 
-// Initialize DB (creates tables + seeds admin)
-require('./database');
+const db = require('./database');
+const { uploadsDir } = require('./utils/storagePath');
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-const { uploadsDir } = require('./utils/storagePath');
+// Ensure DB is ready before handling requests
+app.use(async (req, res, next) => {
+  try {
+    await db.ensureReady();
+    next();
+  } catch (err) {
+    console.error('Database connection error in request:', err);
+    res.status(503).json({ error: 'Database initializing. Please retry in 2 seconds.' });
+  }
+});
 
-// Serve uploaded screenshots & QR codes (both persistent cloud volume and local fallback)
+// Serve static uploads
 app.use('/uploads', express.static(uploadsDir));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/members', require('./routes/members'));
-app.use('/api/committee', require('./routes/committee'));
-app.use('/api/reports', require('./routes/reports'));
-app.use('/api/settings', require('./routes/settings'));
-app.use('/api/notifications', require('./routes/notifications'));
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Mera Kameti chal raha hai! 🟢' });
+// Fallback for uploaded files (redirect to GitHub raw if file not cached in serverless container)
+app.get(['/uploads/:filename', '/api/uploads/:filename'], (req, res) => {
+  const filename = req.params.filename;
+  const p1 = path.join(uploadsDir, filename);
+  if (fs.existsSync(p1)) return res.sendFile(p1);
+  const p2 = path.join(__dirname, 'uploads', filename);
+  if (fs.existsSync(p2)) return res.sendFile(p2);
+  return res.redirect(302, `https://raw.githubusercontent.com/nejamansari33725-bot/meri-kameti/main/backend/uploads/${filename}`);
 });
 
-// In production, Railway/Render serves as API. If someone visits in a browser, redirect directly to official Vercel domain!
-if (!process.env.VERCEL) {
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
-      return next();
-    }
-    return res.redirect(301, `https://merakameti.vercel.app${req.originalUrl}`);
+// Route imports
+const authRoutes = require('./routes/auth');
+const paymentRoutes = require('./routes/payments');
+const memberRoutes = require('./routes/members');
+const committeeRoutes = require('./routes/committee');
+const reportRoutes = require('./routes/reports');
+const settingRoutes = require('./routes/settings');
+const notificationRoutes = require('./routes/notifications');
+
+// Mount routes with BOTH '/api/xyz' and '/xyz' to handle any Vercel rewrite variation
+app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
+app.use('/api/payments', paymentRoutes);
+app.use('/payments', paymentRoutes);
+
+app.use('/api/members', memberRoutes);
+app.use('/members', memberRoutes);
+
+app.use('/api/committee', committeeRoutes);
+app.use('/committee', committeeRoutes);
+
+app.use('/api/reports', reportRoutes);
+app.use('/reports', reportRoutes);
+
+app.use('/api/settings', settingRoutes);
+app.use('/settings', settingRoutes);
+
+app.use('/api/notifications', notificationRoutes);
+app.use('/notifications', notificationRoutes);
+
+// Health check
+app.get(['/api/health', '/health'], (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Mera Kameti chal raha hai! 🟢',
+    platform: 'Vercel Serverless + GitHub Storage',
+    dbReady: db.isReady,
+    admin: 'MD NEJAM ANSARI (8434776690)'
   });
-}
+});
 
 // Error handler
 app.use((err, req, res, next) => {
