@@ -1,321 +1,327 @@
-﻿{
-    "payments":  [
-                     {
-                         "id":  1,
-                         "user_id":  5,
-                         "amount":  500,
-                         "late_fine":  50,
-                         "screenshot_path":  null,
-                         "reference_no":  null,
-                         "note":  null,
-                         "month":  10,
-                         "year":  2026,
-                         "status":  "approved",
-                         "admin_note":  null,
-                         "submitted_at":  "2026-10-30 09:38:04",
-                         "reviewed_at":  "2026-10-30 09:38:28",
-                         "repayment_amount":  0
-                     },
-                     {
-                         "id":  2,
-                         "user_id":  5,
-                         "amount":  0,
-                         "late_fine":  80,
-                         "screenshot_path":  null,
-                         "reference_no":  null,
-                         "note":  null,
-                         "month":  10,
-                         "year":  2026,
-                         "status":  "approved",
-                         "admin_note":  "Quick Approved by Admin",
-                         "submitted_at":  "2026-10-30 09:40:06",
-                         "reviewed_at":  "2026-10-30 09:40:16",
-                         "repayment_amount":  0
-                     },
-                     {
-                         "id":  3,
-                         "user_id":  5,
-                         "amount":  0,
-                         "late_fine":  20,
-                         "screenshot_path":  null,
-                         "reference_no":  null,
-                         "note":  null,
-                         "month":  10,
-                         "year":  2026,
-                         "status":  "approved",
-                         "admin_note":  "Quick Approved by Admin",
-                         "submitted_at":  "2026-10-30 09:42:42",
-                         "reviewed_at":  "2026-10-30 09:42:53",
-                         "repayment_amount":  250
-                     },
-                     {
-                         "id":  4,
-                         "user_id":  2,
-                         "amount":  500,
-                         "late_fine":  0,
-                         "screenshot_path":  null,
-                         "reference_no":  null,
-                         "note":  "Admin Test Payment",
-                         "month":  10,
-                         "year":  2026,
-                         "status":  "approved",
-                         "admin_note":  null,
-                         "submitted_at":  "2026-10-30 13:11:55",
-                         "reviewed_at":  "2026-10-30T13:11:55.481Z",
-                         "repayment_amount":  0
-                     },
-                     {
-                         "id":  5,
-                         "user_id":  5,
-                         "amount":  0,
-                         "late_fine":  20,
-                         "screenshot_path":  "/uploads/payment_1793370166726.jpg",
-                         "reference_no":  null,
-                         "note":  "Hsusb",
-                         "month":  10,
-                         "year":  2026,
-                         "status":  "rejected",
-                         "admin_note":  null,
-                         "submitted_at":  "2026-10-30 14:22:47",
-                         "reviewed_at":  "2026-10-30 14:23:10",
-                         "repayment_amount":  0
-                     },
-                     {
-                         "id":  6,
-                         "user_id":  5,
-                         "amount":  0,
-                         "late_fine":  10,
-                         "screenshot_path":  null,
-                         "reference_no":  null,
-                         "note":  null,
-                         "month":  10,
-                         "year":  2026,
-                         "status":  "rejected",
-                         "admin_note":  "स्क्रीनशॉट सही नहीं है / रेफरेंस नंबर मैच नहीं हुआ",
-                         "submitted_at":  "2026-10-30 18:07:55",
-                         "reviewed_at":  "2026-10-30 18:08:35",
-                         "repayment_amount":  0
-                     }
-                 ],
-    "payout_requests":  [
-                            {
-                                "id":  1,
-                                "user_id":  5,
-                                "month":  10,
-                                "year":  2026,
-                                "requested_amount":  450,
-                                "reason":  null,
-                                "status":  "pending",
-                                "created_at":  "2026-10-30 09:40:59"
-                            }
-                        ],
-    "late_fines":  [
-                       {
-                           "id":  1,
-                           "user_id":  5,
-                           "amount":  80,
-                           "month":  10,
-                           "year":  2026,
-                           "reason":  "समय पर किश्त जमा न करने पर",
-                           "status":  "paid",
-                           "payment_id":  2,
-                           "created_at":  "2026-10-30 09:39:32",
-                           "paid_at":  "2026-10-30 09:40:16"
-                       },
-                       {
-                           "id":  2,
-                           "user_id":  5,
-                           "amount":  20,
-                           "month":  10,
-                           "year":  2026,
-                           "reason":  "Remaining unpaid fine balance",
-                           "status":  "paid",
-                           "payment_id":  3,
-                           "created_at":  "2026-10-30 09:40:16",
-                           "paid_at":  "2026-10-30 09:42:53"
-                       },
-                       {
-                           "id":  3,
-                           "user_id":  5,
-                           "amount":  10,
-                           "month":  10,
-                           "year":  2026,
-                           "reason":  "Late se paisa diya hai mahina ka",
-                           "status":  "unpaid",
-                           "payment_id":  null,
-                           "created_at":  "2026-10-30 15:56:53",
-                           "paid_at":  null
-                       }
-                   ],
-    "settings":  [
-                     {
-                         "key":  "committee_name",
-                         "value":  "Mera Kameti"
-                     },
-                     {
-                         "key":  "upi_id",
-                         "value":  "ansarinizam57970-2@oksbi"
-                     },
-                     {
-                         "key":  "upi_name",
-                         "value":  "MD NEJAM ANSARI"
-                     },
-                     {
-                         "key":  "qr_code_url",
-                         "value":  "/upi-qr.png"
-                     },
-                     {
-                         "key":  "default_late_fine",
-                         "value":  "0"
-                     },
-                     {
-                         "key":  "whatsapp_group_link",
-                         "value":  "https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl\u0026p=a\u0026mlu=4\u0026ilr=4\u0026iam=2"
-                     }
-                 ],
-    "notifications":  [
-                          {
-                              "id":  1,
-                              "user_id":  5,
-                              "title":  "✅ पेमेंट स्वीकृत (Payment Approved) - 10/2026",
-                              "message":  "आपकी ₹500 (+ ₹50 लेट फाइन) की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
-                              "type":  "payment_approved",
-                              "is_read":  0,
-                              "created_at":  "2026-10-30 09:38:28"
-                          },
-                          {
-                              "id":  3,
-                              "user_id":  5,
-                              "title":  "✅ पेमेंट स्वीकृत (Payment Approved) - 10/2026",
-                              "message":  "आपकी ₹0 (+ ₹80 लेट फाइन) की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
-                              "type":  "payment_approved",
-                              "is_read":  0,
-                              "created_at":  "2026-10-30 09:40:16"
-                          },
-                          {
-                              "id":  4,
-                              "user_id":  5,
-                              "title":  "✅ पेमेंट स्वीकृत (Payment Approved) - 10/2026",
-                              "message":  "आपकी ₹0 (+ ₹20 लेट फाइन) (+ ₹250 उठाया वापसी) की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
-                              "type":  "payment_approved",
-                              "is_read":  0,
-                              "created_at":  "2026-10-30 09:42:53"
-                          },
-                          {
-                              "id":  5,
-                              "user_id":  5,
-                              "title":  "❌ पेमेंट अस्वीकृत (Payment Rejected) - 10/2026",
-                              "message":  "आपकी ₹0 की पेमेंट अस्वीकृत कर दी गई है। कारण: एडमिन द्वारा चेक किया गया",
-                              "type":  "payment_rejected",
-                              "is_read":  0,
-                              "created_at":  "2026-10-30 14:23:10"
-                          },
-                          {
-                              "id":  6,
-                              "user_id":  5,
-                              "title":  "⚡ लेट फाइन बकाया सूचना (Late Fine Due) - Oct 2026",
-                              "message":  "एडमिन द्वारा आपके खाते में ₹10 का लेट फाइन लगाया गया है (Oct 2026)। कुल लेट फाइन बकाया: ₹10। कारण: Late se paisa diya hai mahina ka। कृपया Pay पेज पर जाकर इसे जमा करें।",
-                              "type":  "late_fine",
-                              "is_read":  0,
-                              "created_at":  "2026-10-30 15:56:53"
-                          },
-                          {
-                              "id":  7,
-                              "user_id":  5,
-                              "title":  "❌ पेमेंट अस्वीकृत (Payment Rejected) - 10/2026",
-                              "message":  "आपकी ₹0 की पेमेंट अस्वीकृत कर दी गई है। कारण: स्क्रीनशॉट सही नहीं है / रेफरेंस नंबर मैच नहीं हुआ",
-                              "type":  "payment_rejected",
-                              "is_read":  0,
-                              "created_at":  "2026-10-30 18:08:35"
-                          }
-                      ],
-    "users":  [
-                  {
-                      "id":  2,
-                      "name":  "MD NEJAM ANSARI",
-                      "phone":  "8434776690",
-                      "email":  "",
-                      "password":  "$2a$10$Tc.YQPeR9OEkKiQeNKhboucuAUJJYPie9xh2GIcyxoqbDDXZzD1ke",
-                      "role":  "admin",
-                      "status":  "active",
-                      "created_at":  "2026-10-30 05:42:53",
-                      "profile_photo":  "/uploads/avatar_1793379145403.jpg",
-                      "custom_credit":  null,
-                      "custom_debit":  null,
-                      "custom_late_fine":  null,
-                      "custom_late_fine_due":  null
-                  },
-                  {
-                      "id":  3,
-                      "name":  "Md Nejam Ansari",
-                      "phone":  "6202985382",
-                      "email":  null,
-                      "password":  "$2a$10$7b7jo9gbVcmhDj3A/JwA8.BeN6/ePIoriL0YzglCw16HuqX/U9t8e",
-                      "role":  "member",
-                      "status":  "active",
-                      "created_at":  "2026-10-30 05:42:53",
-                      "profile_photo":  null,
-                      "custom_credit":  null,
-                      "custom_debit":  null,
-                      "custom_late_fine":  null,
-                      "custom_late_fine_due":  null
-                  },
-                  {
-                      "id":  4,
-                      "name":  "Neyaz ansari",
-                      "phone":  "7209290143",
-                      "email":  null,
-                      "password":  "$2a$10$AdVmqTVcP/gam8nX4r9tgeD20ilw3LovfrTwrnZDHCE2IGo0BIkNm",
-                      "role":  "member",
-                      "status":  "active",
-                      "created_at":  "2026-10-30 05:42:53",
-                      "profile_photo":  null,
-                      "custom_credit":  null,
-                      "custom_debit":  null,
-                      "custom_late_fine":  null,
-                      "custom_late_fine_due":  null
-                  },
-                  {
-                      "id":  5,
-                      "name":  "Ansari",
-                      "phone":  "9939218425",
-                      "email":  "",
-                      "password":  "$2a$10$HYp57ghI1xsEbFxaMscj2e75B9ph/.vXUH/Fdq.bDiwgsDQSlr0QW",
-                      "role":  "member",
-                      "status":  "active",
-                      "created_at":  "2026-10-30 09:36:31",
-                      "profile_photo":  "/uploads/avatar_1793378741050.jpg",
-                      "custom_credit":  null,
-                      "custom_debit":  null,
-                      "custom_late_fine":  null,
-                      "custom_late_fine_due":  null
-                  },
-                  {
-                      "id":  6,
-                      "name":  "Safique ansari ",
-                      "phone":  "9304837285",
-                      "email":  "mdshafiquea650@gmail.com",
-                      "password":  "$2a$10$M.ulpLWksqFdjeJq.MkNBuAi9VWGO8EJZZD0v5T242bFoJAbiN.D2",
-                      "role":  "member",
-                      "status":  "active",
-                      "created_at":  "2026-10-30 12:12:11",
-                      "profile_photo":  null,
-                      "custom_credit":  null,
-                      "custom_debit":  null,
-                      "custom_late_fine":  null,
-                      "custom_late_fine_due":  null
-                  }
-              ],
-    "committee_rounds":  [
-                             {
-                                 "id":  1,
-                                 "month":  10,
-                                 "year":  2026,
-                                 "winner_user_id":  5,
-                                 "total_collected":  500,
-                                 "payout_amount":  500,
-                                 "notes":  null,
-                                 "created_at":  "2026-10-30 09:41:30"
-                             }
-                         ]
+{
+  "users": [
+    {
+      "id": 2,
+      "name": "MD NEJAM ANSARI",
+      "phone": "8434776690",
+      "email": null,
+      "password": "$2a$10$Tc.YQPeR9OEkKiQeNKhboucuAUJJYPie9xh2GIcyxoqbDDXZzD1ke",
+      "role": "admin",
+      "status": "active",
+      "profile_photo": "/uploads/avatar_1793379145403.jpg",
+      "security_hint": "Ansari",
+      "custom_credit": null,
+      "custom_debit": null,
+      "custom_late_fine": null,
+      "custom_late_fine_due": null,
+      "created_at": "2026-10-30 05:42:53"
+    },
+    {
+      "id": 3,
+      "name": "Md Nejam Ansari",
+      "phone": "6202985382",
+      "email": null,
+      "password": "$2a$10$7b7jo9gbVcmhDj3A/JwA8.BeN6/ePIoriL0YzglCw16HuqX/U9t8e",
+      "role": "member",
+      "status": "active",
+      "profile_photo": null,
+      "security_hint": null,
+      "custom_credit": null,
+      "custom_debit": null,
+      "custom_late_fine": null,
+      "custom_late_fine_due": null,
+      "created_at": "2026-10-30 05:42:53"
+    },
+    {
+      "id": 4,
+      "name": "Neyaz ansari",
+      "phone": "7209290143",
+      "email": null,
+      "password": "$2a$10$AdVmqTVcP/gam8nX4r9tgeD20ilw3LovfrTwrnZDHCE2IGo0BIkNm",
+      "role": "member",
+      "status": "active",
+      "profile_photo": null,
+      "security_hint": null,
+      "custom_credit": null,
+      "custom_debit": null,
+      "custom_late_fine": null,
+      "custom_late_fine_due": null,
+      "created_at": "2026-10-30 05:42:53"
+    },
+    {
+      "id": 5,
+      "name": "Ansari",
+      "phone": "9939218425",
+      "email": null,
+      "password": "$2a$10$HYp57ghI1xsEbFxaMscj2e75B9ph/.vXUH/Fdq.bDiwgsDQSlr0QW",
+      "role": "member",
+      "status": "active",
+      "profile_photo": "/uploads/avatar_1793378741050.jpg",
+      "security_hint": null,
+      "custom_credit": null,
+      "custom_debit": null,
+      "custom_late_fine": null,
+      "custom_late_fine_due": null,
+      "created_at": "2026-10-30 09:36:31"
+    },
+    {
+      "id": 6,
+      "name": "Safique ansari ",
+      "phone": "9304837285",
+      "email": "mdshafiquea650@gmail.com",
+      "password": "$2a$10$M.ulpLWksqFdjeJq.MkNBuAi9VWGO8EJZZD0v5T242bFoJAbiN.D2",
+      "role": "member",
+      "status": "active",
+      "profile_photo": null,
+      "security_hint": null,
+      "custom_credit": null,
+      "custom_debit": null,
+      "custom_late_fine": null,
+      "custom_late_fine_due": null,
+      "created_at": "2026-10-30 12:12:11"
+    }
+  ],
+  "payments": [
+    {
+      "id": 1,
+      "user_id": 5,
+      "amount": 500,
+      "late_fine": 50,
+      "repayment_amount": 0,
+      "screenshot_path": null,
+      "reference_no": null,
+      "note": null,
+      "month": 10,
+      "year": 2026,
+      "status": "approved",
+      "admin_note": null,
+      "submitted_at": "2026-10-30 09:38:04",
+      "reviewed_at": "2026-10-30 09:38:28"
+    },
+    {
+      "id": 2,
+      "user_id": 5,
+      "amount": 0,
+      "late_fine": 80,
+      "repayment_amount": 0,
+      "screenshot_path": null,
+      "reference_no": null,
+      "note": null,
+      "month": 10,
+      "year": 2026,
+      "status": "approved",
+      "admin_note": "Quick Approved by Admin",
+      "submitted_at": "2026-10-30 09:40:06",
+      "reviewed_at": "2026-10-30 09:40:16"
+    },
+    {
+      "id": 3,
+      "user_id": 5,
+      "amount": 0,
+      "late_fine": 20,
+      "repayment_amount": 250,
+      "screenshot_path": null,
+      "reference_no": null,
+      "note": null,
+      "month": 10,
+      "year": 2026,
+      "status": "approved",
+      "admin_note": "Quick Approved by Admin",
+      "submitted_at": "2026-10-30 09:42:42",
+      "reviewed_at": "2026-10-30 09:42:53"
+    },
+    {
+      "id": 4,
+      "user_id": 2,
+      "amount": 500,
+      "late_fine": 0,
+      "repayment_amount": 0,
+      "screenshot_path": null,
+      "reference_no": null,
+      "note": "Admin Test Payment",
+      "month": 10,
+      "year": 2026,
+      "status": "approved",
+      "admin_note": null,
+      "submitted_at": "2026-10-30 13:11:55",
+      "reviewed_at": "2026-10-30T13:11:55.481Z"
+    },
+    {
+      "id": 5,
+      "user_id": 5,
+      "amount": 0,
+      "late_fine": 20,
+      "repayment_amount": 0,
+      "screenshot_path": "/uploads/payment_1793370166726.jpg",
+      "reference_no": null,
+      "note": "Hsusb",
+      "month": 10,
+      "year": 2026,
+      "status": "rejected",
+      "admin_note": null,
+      "submitted_at": "2026-10-30 14:22:47",
+      "reviewed_at": "2026-10-30 14:23:10"
+    },
+    {
+      "id": 6,
+      "user_id": 5,
+      "amount": 0,
+      "late_fine": 10,
+      "repayment_amount": 0,
+      "screenshot_path": null,
+      "reference_no": null,
+      "note": null,
+      "month": 10,
+      "year": 2026,
+      "status": "rejected",
+      "admin_note": "स्क्रीनशॉट सही नहीं है / रेफरेंस नंबर मैच नहीं हुआ",
+      "submitted_at": "2026-10-30 18:07:55",
+      "reviewed_at": "2026-10-30 18:08:35"
+    }
+  ],
+  "committee_rounds": [
+    {
+      "id": 1,
+      "month": 10,
+      "year": 2026,
+      "winner_user_id": 5,
+      "total_collected": 500,
+      "payout_amount": 500,
+      "notes": null,
+      "created_at": "2026-10-30 09:41:30"
+    }
+  ],
+  "settings": [
+    {
+      "key": "committee_name",
+      "value": "Mera Kameti"
+    },
+    {
+      "key": "upi_id",
+      "value": "ansarinizam57970-2@oksbi"
+    },
+    {
+      "key": "upi_name",
+      "value": "MD NEJAM ANSARI"
+    },
+    {
+      "key": "qr_code_url",
+      "value": "/upi-qr.png"
+    },
+    {
+      "key": "default_late_fine",
+      "value": "0"
+    },
+    {
+      "key": "whatsapp_group_link",
+      "value": "https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2"
+    }
+  ],
+  "late_fines": [
+    {
+      "id": 1,
+      "user_id": 5,
+      "amount": 80,
+      "month": 10,
+      "year": 2026,
+      "reason": "समय पर किश्त जमा न करने पर",
+      "status": "paid",
+      "payment_id": 2,
+      "created_at": "2026-10-30 09:39:32",
+      "paid_at": "2026-10-30 09:40:16"
+    },
+    {
+      "id": 2,
+      "user_id": 5,
+      "amount": 20,
+      "month": 10,
+      "year": 2026,
+      "reason": "Remaining unpaid fine balance",
+      "status": "paid",
+      "payment_id": 3,
+      "created_at": "2026-10-30 09:40:16",
+      "paid_at": "2026-10-30 09:42:53"
+    },
+    {
+      "id": 3,
+      "user_id": 5,
+      "amount": 10,
+      "month": 10,
+      "year": 2026,
+      "reason": "Late se paisa diya hai mahina ka",
+      "status": "unpaid",
+      "payment_id": null,
+      "created_at": "2026-10-30 15:56:53",
+      "paid_at": null
+    }
+  ],
+  "payout_requests": [
+    {
+      "id": 1,
+      "user_id": 5,
+      "month": 10,
+      "year": 2026,
+      "requested_amount": 450,
+      "reason": null,
+      "status": "pending",
+      "created_at": "2026-10-30 09:40:59"
+    }
+  ],
+  "notifications": [
+    {
+      "id": 1,
+      "user_id": 5,
+      "title": "✅ पेमेंट स्वीकृत (Payment Approved) - 10/2026",
+      "message": "आपकी ₹500 (+ ₹50 लेट फाइन) की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
+      "type": "payment_approved",
+      "is_read": 0,
+      "created_at": "2026-10-30 09:38:28"
+    },
+    {
+      "id": 3,
+      "user_id": 5,
+      "title": "✅ पेमेंट स्वीकृत (Payment Approved) - 10/2026",
+      "message": "आपकी ₹0 (+ ₹80 लेट फाइन) की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
+      "type": "payment_approved",
+      "is_read": 0,
+      "created_at": "2026-10-30 09:40:16"
+    },
+    {
+      "id": 4,
+      "user_id": 5,
+      "title": "✅ पेमेंट स्वीकृत (Payment Approved) - 10/2026",
+      "message": "आपकी ₹0 (+ ₹20 लेट फाइन) (+ ₹250 उठाया वापसी) की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
+      "type": "payment_approved",
+      "is_read": 0,
+      "created_at": "2026-10-30 09:42:53"
+    },
+    {
+      "id": 5,
+      "user_id": 5,
+      "title": "❌ पेमेंट अस्वीकृत (Payment Rejected) - 10/2026",
+      "message": "आपकी ₹0 की पेमेंट अस्वीकृत कर दी गई है। कारण: एडमिन द्वारा चेक किया गया",
+      "type": "payment_rejected",
+      "is_read": 0,
+      "created_at": "2026-10-30 14:23:10"
+    },
+    {
+      "id": 6,
+      "user_id": 5,
+      "title": "⚡ लेट फाइन बकाया सूचना (Late Fine Due) - Oct 2026",
+      "message": "एडमिन द्वारा आपके खाते में ₹10 का लेट फाइन लगाया गया है (Oct 2026)। कुल लेट फाइन बकाया: ₹10। कारण: Late se paisa diya hai mahina ka। कृपया Pay पेज पर जाकर इसे जमा करें।",
+      "type": "late_fine",
+      "is_read": 0,
+      "created_at": "2026-10-30 15:56:53"
+    },
+    {
+      "id": 7,
+      "user_id": 5,
+      "title": "❌ पेमेंट अस्वीकृत (Payment Rejected) - 10/2026",
+      "message": "आपकी ₹0 की पेमेंट अस्वीकृत कर दी गई है। कारण: स्क्रीनशॉट सही नहीं है / रेफरेंस नंबर मैच नहीं हुआ",
+      "type": "payment_rejected",
+      "is_read": 0,
+      "created_at": "2026-10-30 18:08:35"
+    }
+  ],
+  "exported_at": "2026-10-31T12:35:48.867Z"
 }
