@@ -1,5 +1,5 @@
 [build]
-buildCommand = "npm install && cd frontend && npm install && npm run build"
+buildCommand = "npm install"
 
 [deploy]
 startCommand = "node backend/server.js"
