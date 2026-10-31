@@ -271,16 +271,12 @@ export default function Members() {
                       ₹ {m.total_debit?.toLocaleString('en-IN')}
                     </td>
                     <td className="py-3.5 px-3 text-right">
-                      {m.net_balance > 0 ? (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                          + ₹{m.net_balance.toLocaleString('en-IN')}
-                        </span>
-                      ) : m.net_balance < 0 ? (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                          - ₹{Math.abs(m.net_balance).toLocaleString('en-IN')}
+                      {(m.total_credit || 0) > 0 ? (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
+                          + ₹{m.total_credit?.toLocaleString('en-IN')}
                         </span>
                       ) : (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
                           ₹ 0
                         </span>
                       )}
