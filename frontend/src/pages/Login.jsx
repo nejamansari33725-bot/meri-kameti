@@ -75,7 +75,7 @@ export default function Login() {
     try {
       const res = await api.post('/auth/forgot-password', {
         phone: forgotForm.phone.trim(),
-        name: !isAdmin && forgotForm.name ? forgotForm.name.trim() : undefined,
+        name: isAdmin ? (forgotForm.name?.trim() || 'MD NEJAM ANSARI') : forgotForm.name?.trim(),
         hint: isAdmin && forgotForm.hint ? forgotForm.hint.trim() : undefined,
         new_password: forgotForm.new_password.trim()
       })
