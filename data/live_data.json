@@ -5,7 +5,7 @@
       "name": "MD NEJAM ANSARI",
       "phone": "8434776690",
       "email": null,
-      "password": "$2a$10$NO2yRYVcyF/IUaOasfYV2uAdA1WiaG3zdtMPZToAXKvGnT0yuhYyS",
+      "password": "$2a$10$Tc.YQPeR9OEkKiQeNKhboucuAUJJYPie9xh2GIcyxoqbDDXZzD1ke",
       "role": "admin",
       "status": "active",
       "profile_photo": "/uploads/avatar_1793379145403.jpg",
@@ -323,5 +323,5 @@
       "created_at": "2026-10-30 18:08:35"
     }
   ],
-  "exported_at": "2026-10-31T12:49:07.997Z"
+  "exported_at": "2026-10-31T13:41:58.396Z"
 }
