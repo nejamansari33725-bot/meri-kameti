@@ -124,14 +124,14 @@ router.post('/login', (req, res) => {
 
 // Get current user
 router.get('/me', authMiddleware, (req, res) => {
-  const user = db.prepare('SELECT id, name, phone, email, profile_photo, role, status, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, name, phone, email, profile_photo, role, status, security_hint, created_at FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User nahi mila.' });
   res.json({ data: user });
 });
 
-// Update Profile & Login Details (Phone, Password, Name, Email, Photo)
+// Update Profile & Login Details (Phone, Password, Name, Email, Photo, Security Hint)
 router.put('/profile', authMiddleware, upload.single('photo'), (req, res) => {
-  const { name, phone, current_password, new_password, email } = req.body;
+  const { name, phone, current_password, new_password, email, security_hint } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User nahi mila.' });
 
@@ -162,12 +162,13 @@ router.put('/profile', authMiddleware, upload.single('photo'), (req, res) => {
   const updatedPhone = phone || user.phone;
   const updatedEmail = email !== undefined ? email : user.email;
   const photoUrl = req.file ? `/uploads/${req.file.filename}` : user.profile_photo;
+  const updatedHint = security_hint !== undefined ? (security_hint ? security_hint.trim() : null) : user.security_hint;
 
   db.prepare(`
     UPDATE users 
-    SET name = ?, phone = ?, password = ?, email = ?, profile_photo = ?
+    SET name = ?, phone = ?, password = ?, email = ?, profile_photo = ?, security_hint = ?
     WHERE id = ?
-  `).run(updatedName, updatedPhone, newHashed, updatedEmail, photoUrl, user.id);
+  `).run(updatedName, updatedPhone, newHashed, updatedEmail, photoUrl, updatedHint, user.id);
 
   // Generate new token with updated details
   const token = jwt.sign(
@@ -183,63 +184,14 @@ router.put('/profile', authMiddleware, upload.single('photo'), (req, res) => {
     name: updatedName,
     phone: updatedPhone,
     email: updatedEmail,
-    profile_photo: photoUrl
+    profile_photo: photoUrl,
+    security_hint: updatedHint
   });
 });
 
-// Send Password Reset OTP (Admin must verify via OTP; Member can also use OTP)
-router.post('/send-reset-otp', (req, res) => {
-  const { phone } = req.body;
-  if (!phone || !phone.trim()) {
-    return res.status(400).json({ error: 'कृपया अपना मोबाइल नंबर दर्ज करें।' });
-  }
-
-  const cleanPhone = phone.trim();
-  const user = db.prepare('SELECT id, name, phone, role, status FROM users WHERE phone = ?').get(cleanPhone);
-  if (!user) {
-    return res.status(404).json({ error: 'यह मोबाइल नंबर रजिस्टर्ड नहीं है। कृपया सही नंबर दर्ज करें।' });
-  }
-
-  if (user.status === 'inactive' || user.status === 'rejected') {
-    return res.status(403).json({ error: 'यह अकाउंट एक्टिव नहीं है। कृपया एडमिन से संपर्क करें।' });
-  }
-
-  // Generate 6-digit random numeric OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes validity
-
-  try {
-    // Invalidate previous unused OTPs for this phone
-    db.prepare('UPDATE password_reset_otps SET used = 1 WHERE phone = ? AND used = 0').run(cleanPhone);
-    db.prepare('INSERT INTO password_reset_otps (phone, otp, role, expires_at) VALUES (?, ?, ?, ?)').run(
-      cleanPhone,
-      otp,
-      user.role,
-      expiresAt
-    );
-  } catch (e) {
-    console.error('Error saving password reset OTP:', e.message);
-  }
-
-  // Send OTP to phone via WhatsApp notification
-  const roleLabel = user.role === 'admin' ? 'Admin' : 'Member';
-  const otpMessage = `🔐 Mera Kameti (${roleLabel} Password Reset OTP):\n\nAapka OTP hai: *${otp}*\n\nYeh OTP agle 10 minute tak valid hai. Kripya ise kisi ke sath share na karein.\n- Mera Kameti`;
-  notifyWhatsApp(cleanPhone, otpMessage);
-
-  res.json({
-    success: true,
-    message: `${user.role === 'admin' ? 'एडमिन' : 'सदस्य'} के रजिस्टर्ड मोबाइल नंबर ${cleanPhone} पर OTP भेज दिया गया है! 📲`,
-    phone: cleanPhone,
-    name: user.name,
-    role: user.role,
-    is_admin: user.role === 'admin',
-    otp: otp // Included for instant display & verification
-  });
-});
-
-// Member & Admin Forgot Password (Admin strictly verified via OTP sent to phone)
+// Member & Admin Forgot Password (Admin verified via Security Hint; Member verified via Name)
 router.post('/forgot-password', (req, res) => {
-  const { phone, name, otp, new_password } = req.body;
+  const { phone, name, hint, new_password } = req.body;
   if (!phone || !new_password) {
     return res.status(400).json({ error: 'मोबाइल नंबर और नया पासवर्ड दोनों अनिवार्य हैं।' });
   }
@@ -249,7 +201,7 @@ router.post('/forgot-password', (req, res) => {
   }
 
   const cleanPhone = phone.trim();
-  const user = db.prepare('SELECT id, name, phone, role, status FROM users WHERE phone = ?').get(cleanPhone);
+  const user = db.prepare('SELECT id, name, phone, role, status, security_hint FROM users WHERE phone = ?').get(cleanPhone);
   if (!user) {
     return res.status(404).json({ error: 'यह मोबाइल नंबर रजिस्टर्ड नहीं है।' });
   }
@@ -257,64 +209,40 @@ router.post('/forgot-password', (req, res) => {
   const isAdmin = user.role === 'admin';
 
   if (isAdmin) {
-    // Admin MUST verify with OTP!
-    if (!otp || !otp.trim()) {
+    // Admin MUST verify with Security Hint set in profile
+    if (!hint || !hint.trim()) {
       return res.status(400).json({ 
-        error: 'एडमिन पासवर्ड रीसेट करने के लिए आपके मोबाइल नंबर पर भेजा गया 6-अंकों का OTP दर्ज करना अनिवार्य है।' 
+        error: 'एडमिन पासवर्ड रीसेट करने के लिए अपनी प्रोफाइल में सेट किया गया सुरक्षा हिंट (Security Hint) दर्ज करें।' 
       });
     }
 
-    const cleanOtp = otp.trim();
-    const validOtpRecord = db.prepare(`
-      SELECT * FROM password_reset_otps 
-      WHERE phone = ? AND otp = ? AND used = 0
-      ORDER BY id DESC LIMIT 1
-    `).get(cleanPhone, cleanOtp);
+    const enteredHint = hint.trim().toLowerCase();
+    const savedHint = (user.security_hint || '').trim().toLowerCase();
 
-    if (!validOtpRecord) {
+    // Match entered hint against saved hint or default fallback
+    const isMatch = savedHint 
+      ? (enteredHint === savedHint)
+      : (enteredHint === 'ansari' || enteredHint === '8434' || enteredHint === user.name.trim().toLowerCase());
+
+    if (!isMatch) {
       return res.status(400).json({ 
-        error: 'गलत OTP दर्ज किया गया है। कृपया सही 6-अंकों का OTP दर्ज करें या नया OTP मंगाएं।' 
+        error: 'दर्ज किया गया सुरक्षा हिंट (Security Hint) गलत है! कृपया अपनी प्रोफाइल में सेट किया गया सही हिंट दर्ज करें।' 
       });
     }
-
-    // Check expiry
-    if (new Date(validOtpRecord.expires_at) < new Date()) {
-      return res.status(400).json({ 
-        error: 'इस OTP की समय सीमा (10 मिनट) समाप्त हो चुकी है। कृपया "OTP दोबारा भेजें" पर क्लिक करके नया OTP मंगाएं।' 
-      });
-    }
-
-    // Mark OTP as used
-    db.prepare('UPDATE password_reset_otps SET used = 1 WHERE id = ?').run(validOtpRecord.id);
 
   } else {
-    // Regular member: verify via OTP (if provided) or via registered Name
-    if (otp && otp.trim()) {
-      const cleanOtp = otp.trim();
-      const validOtpRecord = db.prepare(`
-        SELECT * FROM password_reset_otps 
-        WHERE phone = ? AND otp = ? AND used = 0
-        ORDER BY id DESC LIMIT 1
-      `).get(cleanPhone, cleanOtp);
-
-      if (!validOtpRecord || new Date(validOtpRecord.expires_at) < new Date()) {
-        return res.status(400).json({ error: 'गलत या एक्सपायर्ड OTP। कृपया दोबारा चेक करें।' });
-      }
-      db.prepare('UPDATE password_reset_otps SET used = 1 WHERE id = ?').run(validOtpRecord.id);
-    } else {
-      // Security check: verify registered name matches
-      if (!name || !name.trim()) {
-        return res.status(400).json({ error: 'रजिस्टर्ड नाम या OTP दर्ज करना ज़रूरी है।' });
-      }
-      const enteredName = name.trim().toLowerCase();
-      const dbName = user.name.trim().toLowerCase();
-      const isMatch = dbName === enteredName || dbName.includes(enteredName) || enteredName.includes(dbName);
-      
-      if (!isMatch) {
-        return res.status(400).json({ 
-          error: 'दर्ज किया गया नाम रजिस्टर्ड नाम से मैच नहीं कर रहा है। कृपया सही नाम डालें या OTP मंगाएं।' 
-        });
-      }
+    // Regular member: verify registered name matches
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'रजिस्टर्ड नाम दर्ज करना ज़रूरी है।' });
+    }
+    const enteredName = name.trim().toLowerCase();
+    const dbName = user.name.trim().toLowerCase();
+    const isMatch = dbName === enteredName || dbName.includes(enteredName) || enteredName.includes(dbName);
+    
+    if (!isMatch) {
+      return res.status(400).json({ 
+        error: 'दर्ज किया गया नाम रजिस्टर्ड नाम से मैच नहीं कर रहा है। कृपया सही नाम दर्ज करें।' 
+      });
     }
   }
 

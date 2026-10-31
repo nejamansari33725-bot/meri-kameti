@@ -12,7 +12,8 @@ export default function Profile() {
     name: '',
     phone: '',
     email: '',
-    profile_photo: ''
+    profile_photo: '',
+    security_hint: ''
   })
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
@@ -36,7 +37,8 @@ export default function Profile() {
           name: u.name || '',
           phone: u.phone || '',
           email: u.email || '',
-          profile_photo: u.profile_photo || ''
+          profile_photo: u.profile_photo || '',
+          security_hint: u.security_hint || ''
         })
       }
     } catch (err) {
@@ -70,6 +72,7 @@ export default function Profile() {
       data.append('name', formData.name)
       data.append('phone', formData.phone)
       data.append('email', formData.email || '')
+      data.append('security_hint', formData.security_hint ? formData.security_hint.trim() : '')
       if (photoFile) {
         data.append('photo', photoFile)
       }
@@ -265,6 +268,28 @@ export default function Profile() {
               />
               <p className="text-[11px] text-slate-500 mt-1">
                 महत्वपूर्ण सूचनाओं और पासवर्ड रिकवरी के लिए (वैकल्पिक / Optional)
+              </p>
+            </div>
+
+            {/* Password Reset Security Hint (Secret Answer) */}
+            <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-300 space-y-2 shadow-sm">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-amber-950 flex items-center gap-1.5 uppercase">
+                  <span>🛡️</span> पासवर्ड रीसेट सुरक्षा हिंट / Security Hint (Secret Key)
+                </label>
+                <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full border border-amber-400">
+                  पासवर्ड रिकवरी हेतु
+                </span>
+              </div>
+              <input
+                type="text"
+                className="input font-semibold bg-white border-amber-300 focus:border-amber-500 text-slate-900 text-sm shadow-inner"
+                placeholder="उदा. आपका गुप्त कोड, पसंदीदा शब्द या शहर (e.g. Ansari, Patna, 1234)"
+                value={formData.security_hint || ''}
+                onChange={e => setFormData({ ...formData, security_hint: e.target.value })}
+              />
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                💡 <strong>जरूरी:</strong> जब आप पासवर्ड भूल जाएंगे और रीसेट करेंगे, तब आपसे यही गुप्त हिंट पूछा जाएगा। इसे याद रखें!
               </p>
             </div>
 

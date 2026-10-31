@@ -16,24 +16,12 @@ export default function Login() {
   const [forgotForm, setForgotForm] = useState({
     phone: '',
     name: '',
-    otp: '',
+    hint: '',
     new_password: '',
     confirm_password: ''
   })
   const [forgotLoading, setForgotLoading] = useState(false)
-  const [otpSending, setOtpSending] = useState(false)
-  const [otpSent, setOtpSent] = useState(false)
   const [isAdminReset, setIsAdminReset] = useState(false)
-  const [receivedOtp, setReceivedOtp] = useState('')
-  const [otpCountdown, setOtpCountdown] = useState(0)
-
-  useEffect(() => {
-    let timer
-    if (otpCountdown > 0) {
-      timer = setTimeout(() => setOtpCountdown(otpCountdown - 1), 1000)
-    }
-    return () => clearTimeout(timer)
-  }, [otpCountdown])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -62,49 +50,18 @@ export default function Login() {
 
   const isAdmin = forgotForm.phone.trim() === '8434776690' || isAdminReset
 
-  const handleSendOtp = async (e) => {
-    if (e) e.preventDefault()
-    if (!forgotForm.phone || !forgotForm.phone.trim()) {
-      return toast.error('कृपया अपना 10-अंकों का मोबाइल नंबर दर्ज करें!')
-    }
-    setOtpSending(true)
-
-    // Generate instant 6-digit OTP so admin is NEVER blocked
-    const instantOtp = Math.floor(100000 + Math.random() * 900000).toString()
-    setReceivedOtp(instantOtp)
-    setForgotForm(prev => ({ ...prev, otp: instantOtp }))
-    setOtpCountdown(30)
-    setIsAdminReset(true)
-
-    try {
-      const res = await api.post('/auth/send-reset-otp', {
-        phone: forgotForm.phone.trim()
-      })
-      if (res.data?.otp) {
-        setReceivedOtp(res.data.otp)
-        setForgotForm(prev => ({ ...prev, otp: res.data.otp }))
-      }
-      toast.success('एडमिन सुरक्षा OTP जारी हुआ! 📲 (नीचे पीले बॉक्स में देखें)', { duration: 6000 })
-    } catch (err) {
-      // Graceful fallback: show the generated OTP immediately
-      toast.success('एडमिन सुरक्षा OTP जारी हुआ! 📲 (नीचे पीले बॉक्स में देखें)', { duration: 6000 })
-    } finally {
-      setOtpSending(false)
-    }
-  }
-
   const handleForgotPassword = async (e) => {
     e.preventDefault()
     if (!forgotForm.phone || !forgotForm.phone.trim()) {
       return toast.error('मोबाइल नंबर दर्ज करना अनिवार्य है।')
     }
 
-    if (!forgotForm.name || !forgotForm.name.trim()) {
+    if (!isAdmin && (!forgotForm.name || !forgotForm.name.trim())) {
       return toast.error('रजिस्टर्ड नाम दर्ज करना अनिवार्य है।')
     }
 
-    if (isAdmin && (!forgotForm.otp || !forgotForm.otp.trim())) {
-      return toast.error('एडमिन पासवर्ड बदलने के लिए OTP दर्ज करना अनिवार्य है! कृपया "OTP मंगाएं" पर क्लिक करें।')
+    if (isAdmin && (!forgotForm.hint || !forgotForm.hint.trim())) {
+      return toast.error('एडमिन सुरक्षा हिंट (Security Hint) दर्ज करना अनिवार्य है!')
     }
 
     if (!forgotForm.new_password || forgotForm.new_password.length < 6) {
@@ -118,17 +75,15 @@ export default function Login() {
     try {
       const res = await api.post('/auth/forgot-password', {
         phone: forgotForm.phone.trim(),
-        name: forgotForm.name.trim(),
-        otp: isAdmin ? forgotForm.otp.trim() : undefined,
+        name: !isAdmin && forgotForm.name ? forgotForm.name.trim() : undefined,
+        hint: isAdmin && forgotForm.hint ? forgotForm.hint.trim() : undefined,
         new_password: forgotForm.new_password.trim()
       })
-      toast.success(res.data.message || 'पासवर्ड बदल गया! अब लॉगिन करें। ✅')
+      toast.success(res.data.message || 'पासवर्ड बदल गया! अब नए पासवर्ड से लॉगिन करें। ✅')
       setForm(prev => ({ ...prev, phone: forgotForm.phone, password: '' }))
       setShowForgotModal(false)
-      setForgotForm({ phone: '', name: '', otp: '', new_password: '', confirm_password: '' })
-      setOtpSent(false)
+      setForgotForm({ phone: '', name: '', hint: '', new_password: '', confirm_password: '' })
       setIsAdminReset(false)
-      setReceivedOtp('')
     } catch (err) {
       toast.error(err.response?.data?.error || 'पासवर्ड रीसेट नहीं हो पाया।')
     } finally {
@@ -229,7 +184,7 @@ export default function Login() {
                 </h2>
                 <p className="text-xs text-slate-500">
                   {isAdmin 
-                    ? 'एडमिन पासवर्ड बदलने के लिए मोबाइल नंबर, नाम व OTP दर्ज करें'
+                    ? 'एडमिन पासवर्ड बदलने के लिए मोबाइल नंबर, सुरक्षा हिंट व नया पासवर्ड दर्ज करें'
                     : 'अपना रजिस्टर्ड मोबाइल नंबर व नाम दर्ज करके नया पासवर्ड बनाएं'}
                 </p>
               </div>
@@ -237,40 +192,14 @@ export default function Login() {
                 type="button"
                 onClick={() => {
                   setShowForgotModal(false)
-                  setOtpSent(false)
                   setIsAdminReset(false)
-                  setReceivedOtp('')
+                  setForgotForm({ phone: '', name: '', hint: '', new_password: '', confirm_password: '' })
                 }}
                 className="text-slate-400 hover:text-slate-600 text-xl font-bold"
               >
                 ✕
               </button>
             </div>
-
-            {/* Admin OTP Notification Banner (Only for Admin when OTP generated) */}
-            {isAdmin && receivedOtp && (
-              <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl space-y-2 animate-fadeIn shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                    <span>📲</span> एडमिन सुरक्षा OTP कोड:
-                  </span>
-                  <span className="font-mono text-base bg-amber-200 px-3 py-0.5 rounded-lg border border-amber-400 font-black tracking-widest text-amber-950">
-                    {receivedOtp}
-                  </span>
-                </div>
-                <p className="text-[11px] text-amber-800">
-                  यह सुरक्षा OTP एडमिन नंबर <strong>8434776690</strong> के लिए जारी हुआ है। कृपया इसे नीचे OTP बॉक्स में लिखें।
-                </p>
-                <a
-                  href={`https://api.whatsapp.com/send?phone=918434776690&text=${encodeURIComponent(`🔐 Mera Kameti Admin Verification OTP: ${receivedOtp}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold text-center flex items-center justify-center gap-1.5 shadow-sm transition-all"
-                >
-                  <span>💬</span> WhatsApp पर OTP देखें / भेजें
-                </a>
-              </div>
-            )}
 
             <form onSubmit={handleForgotPassword} className="space-y-3.5">
               {/* 1. Mobile Number */}
@@ -291,57 +220,52 @@ export default function Login() {
                       setIsAdminReset(true)
                     } else if (isAdminReset && val.trim() !== '8434776690') {
                       setIsAdminReset(false)
-                      setReceivedOtp('')
                     }
                   }}
                 />
               </div>
 
-              {/* 2. Registered Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  👤 रजिस्टर्ड नाम (Member Full Name) *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="आपका रजिस्टर्ड नाम..."
-                  className="input text-sm"
-                  value={forgotForm.name}
-                  onChange={e => setForgotForm({ ...forgotForm, name: e.target.value })}
-                />
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  सुरक्षा के लिए आपका नाम रजिस्टर्ड रिकॉर्ड से मिलना ज़रूरी है।
-                </p>
-              </div>
+              {/* 2. Member Name (Only for normal members) */}
+              {!isAdmin && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    👤 रजिस्टर्ड नाम (Member Full Name) *
+                  </label>
+                  <input
+                    type="text"
+                    required={!isAdmin}
+                    placeholder="आपका रजिस्टर्ड नाम..."
+                    className="input text-sm"
+                    value={forgotForm.name}
+                    onChange={e => setForgotForm({ ...forgotForm, name: e.target.value })}
+                  />
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    सुरक्षा के लिए आपका नाम रजिस्टर्ड रिकॉर्ड से मिलना ज़रूरी है।
+                  </p>
+                </div>
+              )}
 
-              {/* 3. Admin OTP Field (Shown ONLY when Admin number is entered) */}
+              {/* 3. Admin Security Hint (Only for Admin - Set in Profile) */}
               {isAdmin && (
-                <div className="p-3 bg-amber-50/80 border border-amber-300 rounded-2xl space-y-2 animate-fadeIn">
+                <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl space-y-2 animate-fadeIn shadow-sm">
                   <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-amber-950 flex items-center gap-1">
-                      <span>👑</span> एडमिन OTP (Admin OTP) *
+                    <label className="block text-xs font-black text-amber-950 flex items-center gap-1.5 uppercase">
+                      <span>🛡️</span> एडमिन सुरक्षा हिंट (Security Hint) *
                     </label>
-                    <button
-                      type="button"
-                      disabled={otpSending || otpCountdown > 0}
-                      onClick={handleSendOtp}
-                      className="text-[11px] font-bold text-amber-900 hover:underline disabled:text-slate-400 bg-amber-200/70 hover:bg-amber-200 px-2.5 py-1 rounded-lg border border-amber-300 transition-colors"
-                    >
-                      {otpSending ? '⏳ OTP भेज रहे हैं...' : otpCountdown > 0 ? `दोबारा भेजें (${otpCountdown}s)` : receivedOtp ? '🔄 दोबारा OTP मंगाएं' : '📲 OTP प्राप्त करें'}
-                    </button>
+                    <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full border border-amber-400">
+                      प्रोफाइल सीक्रेट कोड
+                    </span>
                   </div>
                   <input
                     type="text"
                     required={isAdmin}
-                    maxLength={6}
-                    placeholder="6-अंकों का OTP दर्ज करें..."
-                    className="input font-mono font-black text-center tracking-[0.3em] text-lg bg-white border-amber-300 focus:border-amber-500 py-2 text-amber-950"
-                    value={forgotForm.otp}
-                    onChange={e => setForgotForm({ ...forgotForm, otp: e.target.value.replace(/\D/g, '') })}
+                    placeholder="प्रोफाइल में सेट किया गया गुप्त हिंट दर्ज करें..."
+                    className="input font-semibold bg-white border-amber-300 focus:border-amber-500 py-2.5 text-slate-900 text-sm shadow-inner"
+                    value={forgotForm.hint}
+                    onChange={e => setForgotForm({ ...forgotForm, hint: e.target.value })}
                   />
-                  <p className="text-[10px] text-amber-800 font-medium">
-                    एडमिन सुरक्षा हेतु "OTP प्राप्त करें" पर क्लिक करें और प्राप्त कोड यहाँ भरें।
+                  <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+                    💡 एडमिन सुरक्षा हेतु अपनी प्रोफाइल में सेव किया गया सीक्रेट हिंट दर्ज करें (शुरुआती डिफ़ॉल्ट हिंट: <strong>Ansari</strong>)।
                   </p>
                 </div>
               )}

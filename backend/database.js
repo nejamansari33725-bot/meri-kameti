@@ -76,6 +76,11 @@ try {
   db.exec(`ALTER TABLE users ADD COLUMN profile_photo TEXT;`);
 } catch (e) {}
 
+// Add security_hint column to users if not exists (for password reset hint)
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN security_hint TEXT DEFAULT NULL;`);
+} catch (e) {}
+
 // Add repayment_amount column to payments if not exists (for uthaya hua paisa wapsi)
 try {
   db.exec(`ALTER TABLE payments ADD COLUMN repayment_amount REAL DEFAULT 0;`);
@@ -179,12 +184,16 @@ try {
 
 // Sole Admin is 8434776690 (MD NEJAM ANSARI)
 try {
-  const admin8434 = db.prepare("SELECT id FROM users WHERE phone = '8434776690'").get();
+  const admin8434 = db.prepare("SELECT id, security_hint FROM users WHERE phone = '8434776690'").get();
   const hashedAdminPass = bcrypt.hashSync('admin123', 10);
   if (admin8434) {
-    db.prepare("UPDATE users SET name = 'MD NEJAM ANSARI', role = 'admin', status = 'active', password = ? WHERE phone = '8434776690'").run(hashedAdminPass);
+    db.prepare("UPDATE users SET name = 'MD NEJAM ANSARI', role = 'admin', status = 'active' WHERE phone = '8434776690'").run();
+    // If admin has no security_hint set yet, provide default 'Ansari'
+    if (!admin8434.security_hint) {
+      db.prepare("UPDATE users SET security_hint = 'Ansari' WHERE phone = '8434776690'").run();
+    }
   } else {
-    db.prepare("INSERT INTO users (name, phone, password, role, status) VALUES ('MD NEJAM ANSARI', '8434776690', ?, 'admin', 'active')").run(hashedAdminPass);
+    db.prepare("INSERT INTO users (name, phone, password, role, status, security_hint) VALUES ('MD NEJAM ANSARI', '8434776690', ?, 'admin', 'active', 'Ansari')").run(hashedAdminPass);
   }
 } catch (e) {}
 
