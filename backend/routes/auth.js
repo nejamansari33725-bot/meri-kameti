@@ -9,7 +9,7 @@ const { authMiddleware } = require('../middleware/auth');
 const { notifyWhatsApp } = require('../utils/whatsapp');
 const { uploadsDir } = require('../utils/storagePath');
 
-// Multer setup for profile photo uploads (stored on persistent cloud volume)
+// Multer setup for profile photo uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
@@ -21,53 +21,47 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp/;
-    if (allowed.test(path.extname(file.originalname).toLowerCase())) {
-      cb(null, true);
-    } else {
-      cb(new Error('Sirf images allow hain (jpg, png, webp).'));
-    }
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Sirf images upload kar sakte hain.'));
   }
 });
 
-// Register - New members require Admin approval
+// Register new member (pending approval)
 router.post('/register', (req, res) => {
   const { name, phone, password, email } = req.body;
   if (!name || !phone || !password) {
     return res.status(400).json({ error: 'Naam, phone aur password zaroori hain.' });
   }
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'Password kam se kam 6 characters ka hona chahiye.' });
-  }
 
-  const existing = db.prepare('SELECT id, status FROM users WHERE phone = ?').get(phone);
+  const cleanPhone = phone.trim();
+  const existing = db.prepare('SELECT id, status FROM users WHERE phone = ?').get(cleanPhone);
   if (existing) {
     if (existing.status === 'pending') {
-      return res.status(400).json({ error: 'Yeh phone number pehle se registered hai aur Admin approval ke liye pending hai.' });
+      return res.status(400).json({ error: 'Aapka account pehle se approval ke liye pending hai.' });
     }
     return res.status(400).json({ error: 'Yeh phone number pehle se registered hai.' });
   }
 
-  const hashed = bcrypt.hashSync(password, 10);
+  const hashedPassword = bcrypt.hashSync(password, 10);
   const result = db.prepare(
-    'INSERT INTO users (name, phone, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(name, phone, email || null, hashed, 'member', 'pending');
+    'INSERT INTO users (name, phone, password, email, role, status) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(name.trim(), cleanPhone, hashedPassword, email ? email.trim() : null, 'member', 'pending');
 
-  // Notify Admin via WhatsApp that a new member registered
+  // Notify admin on WhatsApp about new registration
   const admin = db.prepare("SELECT phone FROM users WHERE role = 'admin' LIMIT 1").get();
-  if (admin) {
-    notifyWhatsApp(admin.phone, `👤 Naya Member Registration Request!\nName: ${name}\nPhone: ${phone}\nKripya Admin Panel me jakar approve karein.`);
+  if (admin && admin.phone) {
+    notifyWhatsApp(admin.phone, `🔔 *Naya Member Registration!*\nNaam: ${name.trim()}\nPhone: ${cleanPhone}\nStatus: Pending Approval`);
   }
 
-  res.json({
-    message: 'Registration safal! Aapka account Admin ke approval ke liye bhej diya gaya hai. Admin approve karega tab aap login kar sakenge.',
-    pendingApproval: true,
+  res.status(201).json({ 
+    message: 'Registration safal raha! Admin approval ke baad aap login kar sakenge.',
+    id: result.lastInsertRowid,
     name
   });
 });
 
 // Login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   let { phone, password } = req.body;
   if (!phone || !password) {
     return res.status(400).json({ error: 'Phone aur password daalen.' });
@@ -80,7 +74,14 @@ router.post('/login', (req, res) => {
   }
 
   // Look up user by clean 10-digit phone or raw input
-  const user = db.prepare('SELECT * FROM users WHERE phone = ? OR phone = ?').get(cleanDigits, rawPhone);
+  let user = db.prepare('SELECT * FROM users WHERE phone = ? OR phone = ?').get(cleanDigits, rawPhone);
+  if (!user) {
+    try {
+      await db.refreshFromGitHub(true);
+      user = db.prepare('SELECT * FROM users WHERE phone = ? OR phone = ?').get(cleanDigits, rawPhone);
+    } catch (e) {}
+  }
+
   if (!user) {
     return res.status(400).json({ error: 'Phone number registered nahi hai.' });
   }
@@ -102,7 +103,23 @@ router.post('/login', (req, res) => {
 
   const rawPassword = String(password);
   const cleanPassword = rawPassword.trim();
-  const valid = bcrypt.compareSync(rawPassword, user.password) || bcrypt.compareSync(cleanPassword, user.password);
+  let valid = bcrypt.compareSync(rawPassword, user.password) || bcrypt.compareSync(cleanPassword, user.password);
+
+  if (!valid) {
+    // If password mismatch in local memory, ALWAYS refresh from GitHub and re-check!
+    // This guarantees multi-tab and multi-serverless-container consistency
+    try {
+      await db.refreshFromGitHub(true);
+      const freshUser = db.prepare('SELECT * FROM users WHERE phone = ? OR phone = ?').get(cleanDigits, rawPhone);
+      if (freshUser) {
+        user = freshUser;
+        valid = bcrypt.compareSync(rawPassword, user.password) || bcrypt.compareSync(cleanPassword, user.password);
+      }
+    } catch (e) {
+      console.warn('Login refresh check error:', e.message);
+    }
+  }
+
   if (!valid) {
     return res.status(400).json({ error: 'Password galat hai.' });
   }
@@ -123,14 +140,20 @@ router.post('/login', (req, res) => {
 });
 
 // Get current user
-router.get('/me', authMiddleware, (req, res) => {
-  const user = db.prepare('SELECT id, name, phone, email, profile_photo, role, status, security_hint, created_at FROM users WHERE id = ?').get(req.user.id);
+router.get('/me', authMiddleware, async (req, res) => {
+  let user = db.prepare('SELECT id, name, phone, email, profile_photo, role, status, security_hint, created_at FROM users WHERE id = ?').get(req.user.id);
+  if (!user) {
+    try {
+      await db.refreshFromGitHub(true);
+      user = db.prepare('SELECT id, name, phone, email, profile_photo, role, status, security_hint, created_at FROM users WHERE id = ?').get(req.user.id);
+    } catch (e) {}
+  }
   if (!user) return res.status(404).json({ error: 'User nahi mila.' });
   res.json({ data: user });
 });
 
 // Update Profile & Login Details (Phone, Password, Name, Email, Photo, Security Hint)
-router.put('/profile', authMiddleware, upload.single('photo'), (req, res) => {
+router.put('/profile', authMiddleware, upload.single('photo'), async (req, res) => {
   const { name, phone, current_password, new_password, email, security_hint } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User nahi mila.' });
@@ -170,6 +193,9 @@ router.put('/profile', authMiddleware, upload.single('photo'), (req, res) => {
     WHERE id = ?
   `).run(updatedName, updatedPhone, newHashed, updatedEmail, photoUrl, updatedHint, user.id);
 
+  // Immediately commit updated password & profile to GitHub
+  await db.syncToGitHub();
+
   // Generate new token with updated details
   const token = jwt.sign(
     { id: user.id, name: updatedName, phone: updatedPhone, role: user.role, profile_photo: photoUrl },
@@ -190,7 +216,7 @@ router.put('/profile', authMiddleware, upload.single('photo'), (req, res) => {
 });
 
 // Member & Admin Forgot Password (Admin verified via Security Hint; Member verified via Name)
-router.post('/forgot-password', (req, res) => {
+router.post('/forgot-password', async (req, res) => {
   const { phone, name, hint, new_password } = req.body;
   if (!phone || !new_password) {
     return res.status(400).json({ error: 'मोबाइल नंबर और नया पासवर्ड दोनों अनिवार्य हैं।' });
@@ -201,7 +227,14 @@ router.post('/forgot-password', (req, res) => {
   }
 
   const cleanPhone = phone.trim();
-  const user = db.prepare('SELECT id, name, phone, role, status, security_hint FROM users WHERE phone = ?').get(cleanPhone);
+  let user = db.prepare('SELECT id, name, phone, role, status, security_hint FROM users WHERE phone = ?').get(cleanPhone);
+  if (!user) {
+    try {
+      await db.refreshFromGitHub(true);
+      user = db.prepare('SELECT id, name, phone, role, status, security_hint FROM users WHERE phone = ?').get(cleanPhone);
+    } catch (e) {}
+  }
+
   if (!user) {
     return res.status(404).json({ error: 'यह मोबाइल नंबर रजिस्टर्ड नहीं है।' });
   }
@@ -248,6 +281,9 @@ router.post('/forgot-password', (req, res) => {
 
   const hashedPassword = bcrypt.hashSync(new_password, 10);
   db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, user.id);
+
+  // Immediately commit new password to GitHub
+  await db.syncToGitHub();
 
   notifyWhatsApp(user.phone, `🔐 Mera Kameti: ${isAdmin ? 'Admin' : 'Aapka'} password safaltapoorvak badal diya gaya hai. Ab aap naye password se login kar sakte hain.`);
 

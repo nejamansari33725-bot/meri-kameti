@@ -17,10 +17,16 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// Ensure DB is ready before handling requests
+// Ensure DB is ready and synchronized before handling requests
+let lastSyncCheck = 0;
 app.use(async (req, res, next) => {
   try {
     await db.ensureReady();
+    const now = Date.now();
+    if (now - lastSyncCheck > 3000) {
+      lastSyncCheck = now;
+      await db.refreshFromGitHub(false);
+    }
     next();
   } catch (err) {
     console.error('Database connection error in request:', err);

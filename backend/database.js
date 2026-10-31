@@ -7,6 +7,8 @@ let SQL = null;
 let db = null;
 let isReady = false;
 let initPromise = null;
+let currentSha = null;
+let lastRefreshTime = 0;
 
 const { dbPath, baseDir } = require('./utils/storagePath');
 const liveDataPath = path.join(__dirname, '../data/live_data.json');
@@ -59,7 +61,7 @@ function scheduleGitHubSync() {
   if (syncTimer) clearTimeout(syncTimer);
   syncTimer = setTimeout(() => {
     syncToGitHub().catch(e => console.error('GitHub sync background error:', e.message));
-  }, 400);
+  }, 300);
 }
 
 async function fetchFromGitHub() {
@@ -75,10 +77,37 @@ async function fetchFromGitHub() {
     const json = await res.json();
     if (!json.content) return null;
     const decoded = Buffer.from(json.content, 'base64').toString('utf8');
-    return JSON.parse(decoded);
+    const parsed = JSON.parse(decoded);
+    return { data: parsed, sha: json.sha };
   } catch (e) {
     console.warn('⚠️ fetchFromGitHub failed:', e.message);
     return null;
+  }
+}
+
+async function refreshFromGitHub(force = false) {
+  const now = Date.now();
+  if (!force && (now - lastRefreshTime < 3000)) {
+    return;
+  }
+  lastRefreshTime = now;
+
+  try {
+    const remote = await fetchFromGitHub();
+    if (!remote || !remote.data || !Array.isArray(remote.data.users)) {
+      return;
+    }
+
+    if (!force && currentSha && remote.sha === currentSha) {
+      return; // Already up to date
+    }
+
+    currentSha = remote.sha;
+    populateTables(remote.data);
+    saveToDisk();
+    console.log(`🔄 Refreshed database state from GitHub! (SHA: ${currentSha.substring(0, 7)})`);
+  } catch (err) {
+    console.warn('⚠️ refreshFromGitHub error:', err.message);
   }
 }
 
@@ -95,7 +124,7 @@ async function syncToGitHub() {
       }
     } catch (e) {}
 
-    let sha = null;
+    let sha = currentSha;
     try {
       const getRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
         headers: {
@@ -128,7 +157,10 @@ async function syncToGitHub() {
     });
 
     if (putRes.ok) {
-      console.log('☁️ Database successfully persisted to GitHub repository!');
+      const result = await putRes.json();
+      currentSha = result.content ? result.content.sha : (sha || null);
+      lastRefreshTime = Date.now();
+      console.log(`☁️ Database persisted to GitHub! SHA: ${currentSha ? currentSha.substring(0, 7) : 'ok'}`);
     } else {
       console.warn('⚠️ GitHub commit returned status:', putRes.status);
     }
@@ -255,44 +287,7 @@ function createSchema() {
   `);
 }
 
-function getTableCount(tableName) {
-  try {
-    const res = wrapper.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get();
-    return res ? res.count : 0;
-  } catch (e) {
-    return 0;
-  }
-}
-
-async function populateFromLiveData() {
-  let data = null;
-
-  try {
-    data = require('../data/live_data.json');
-    console.log('📦 Loaded bundled live data from data/live_data.json');
-  } catch (e) {}
-
-  if (!data && fs.existsSync(liveDataPath)) {
-    try {
-      const raw = fs.readFileSync(liveDataPath, 'utf8');
-      data = JSON.parse(raw);
-    } catch (e) {
-      console.warn('⚠️ Error reading live_data.json:', e.message);
-    }
-  }
-
-  if (!data || !data.users || data.users.length === 0) {
-    try {
-      const ghData = await fetchFromGitHub();
-      if (ghData && ghData.users) {
-        data = ghData;
-        console.log('🌐 Loaded latest data from GitHub repository');
-      }
-    } catch (e) {
-      console.warn('⚠️ GitHub fetch failed:', e.message);
-    }
-  }
-
+function populateTables(data) {
   if (!data) return;
 
   if (Array.isArray(data.users)) {
@@ -423,15 +418,42 @@ async function populateFromLiveData() {
       ]);
     }
   }
+}
 
-  console.log('✅ Initial database populated from live data snapshot!');
+async function populateFromLiveData() {
+  let loadedData = null;
+
+  // 1. ALWAYS try live data from GitHub first (Single Source of Truth)
+  try {
+    const remote = await fetchFromGitHub();
+    if (remote && remote.data && Array.isArray(remote.data.users) && remote.data.users.length > 0) {
+      loadedData = remote.data;
+      currentSha = remote.sha;
+      lastRefreshTime = Date.now();
+      console.log(`🌐 Loaded latest live data directly from GitHub (SHA: ${currentSha.substring(0, 7)})`);
+    }
+  } catch (e) {
+    console.warn('⚠️ GitHub initial fetch failed:', e.message);
+  }
+
+  // 2. Only if GitHub fetch fails, fall back to bundled file
+  if (!loadedData) {
+    try {
+      loadedData = require('../data/live_data.json');
+      console.log('📦 Loaded bundled live data from data/live_data.json fallback');
+    } catch (e) {}
+  }
+
+  if (loadedData) {
+    populateTables(loadedData);
+  }
 }
 
 function ensureAdmin() {
   try {
     const admin8434 = wrapper.prepare("SELECT id, security_hint, password FROM users WHERE phone = '8434776690'").get();
-    const hashed = bcrypt.hashSync('admin123', 10);
     if (!admin8434) {
+      const hashed = bcrypt.hashSync('admin123', 10);
       wrapper.prepare(`
         INSERT INTO users (name, phone, password, role, status, security_hint)
         VALUES ('MD NEJAM ANSARI', '8434776690', ?, 'admin', 'active', 'Ansari')
@@ -458,28 +480,10 @@ async function _init() {
   }
 
   SQL = await initSqlJs({ wasmBinary });
-
-  if (fs.existsSync(dbPath)) {
-    try {
-      const buf = fs.readFileSync(dbPath);
-      db = new SQL.Database(buf);
-      console.log('✅ Loaded existing SQLite database from disk:', dbPath);
-    } catch (e) {
-      console.warn('⚠️ Could not open existing dbPath, creating fresh:', e.message);
-      db = new SQL.Database();
-    }
-  } else {
-    db = new SQL.Database();
-    console.log('🆕 Created fresh SQLite database instance');
-  }
-
+  db = new SQL.Database();
   createSchema();
 
-  const userCount = getTableCount('users');
-  if (userCount === 0) {
-    await populateFromLiveData();
-  }
-
+  await populateFromLiveData();
   ensureAdmin();
   saveToDisk();
 
@@ -498,6 +502,7 @@ async function ensureReady() {
 const wrapper = {
   ensureReady,
   syncToGitHub,
+  refreshFromGitHub,
   saveToDisk,
   get hasToken() {
     return !!GITHUB_TOKEN;
