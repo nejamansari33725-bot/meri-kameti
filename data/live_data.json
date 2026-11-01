@@ -135,7 +135,7 @@
       "email": null,
       "password": "$2a$10$uwnYpOGHk.575RcVhjJ1Iu2XWxoHSzx.Fh4gb1nEfLJKECOojT1DK",
       "role": "member",
-      "status": "pending",
+      "status": "active",
       "profile_photo": null,
       "security_hint": null,
       "custom_credit": null,
@@ -366,5 +366,5 @@
       "created_at": "2026-10-30 18:08:35"
     }
   ],
-  "exported_at": "2026-11-01T15:12:58.250Z"
+  "exported_at": "2026-11-01T15:13:10.216Z"
 }
