@@ -87,7 +87,7 @@
       "email": "sem4782@gmail.com",
       "password": "$2a$10$To2d2Kf8KUx9N2Zu5XkHCuW31fHlrjWVRs4d6DR.1vfcX6tXUfHnq",
       "role": "member",
-      "status": "pending",
+      "status": "active",
       "profile_photo": null,
       "security_hint": null,
       "custom_credit": null,
@@ -355,5 +355,5 @@
       "created_at": "2026-10-30 18:08:35"
     }
   ],
-  "exported_at": "2026-11-01T07:30:36.397Z"
+  "exported_at": "2026-11-01T07:30:40.077Z"
 }
