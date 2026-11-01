@@ -3,86 +3,15 @@ const router = express.Router();
 const db = require('../database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { notifyWhatsApp } = require('../utils/whatsapp');
+const { getMembersWithLedger, calculateOverallTotals } = require('../utils/ledger');
 const bcrypt = require('bcryptjs');
 
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Helper to query all approved participants with full ledger details
-function getMembersWithLedger() {
-  return db.prepare(`
-    SELECT 
-      u.id, 
-      u.name, 
-      u.phone, 
-      u.email, 
-      u.profile_photo,
-      u.role,
-      u.status, 
-      u.created_at,
-      u.custom_credit,
-      u.custom_debit,
-      u.custom_late_fine,
-      u.custom_late_fine_due,
-      COALESCE(u.custom_late_fine_due, lf.total_late_fine_due, 0) as late_fine_due,
-      COALESCE(u.custom_credit, p.total_credit, 0) as total_credit,
-      COALESCE(u.custom_late_fine, p.total_late_fine, 0) as total_late_fine,
-      COALESCE(p.approved_count, 0) as total_payments,
-      COALESCE(p.total_repayment, 0) as total_repayment,
-      COALESCE(u.custom_debit, MAX(0, COALESCE(r.total_debit, 0) - COALESCE(p.total_repayment, 0)), 0) as total_debit,
-      COALESCE(r.rounds_won_count, 0) as rounds_won_count,
-      COALESCE(r.rounds_won_info, '') as rounds_won_info,
-      COALESCE(pend.pending_payment_count, 0) as pending_payment_count,
-      COALESCE(pend.pending_payment_amount, 0) as pending_payment_amount,
-      COALESCE(u.custom_credit, p.total_credit, 0) as net_balance
-    FROM users u
-    LEFT JOIN (
-      SELECT 
-        user_id, 
-        SUM(amount) as total_late_fine_due,
-        COUNT(id) as unpaid_fines_count
-      FROM late_fines 
-      WHERE status = 'unpaid'
-      GROUP BY user_id
-    ) lf ON u.id = lf.user_id
-    LEFT JOIN (
-      SELECT 
-        user_id, 
-        SUM(amount) as total_credit, 
-        SUM(COALESCE(late_fine, 0)) as total_late_fine,
-        SUM(COALESCE(repayment_amount, 0)) as total_repayment,
-        COUNT(id) as approved_count
-      FROM payments 
-      WHERE status = 'approved'
-      GROUP BY user_id
-    ) p ON u.id = p.user_id
-    LEFT JOIN (
-      SELECT 
-        user_id,
-        COUNT(id) as pending_payment_count,
-        SUM(amount + COALESCE(repayment_amount, 0)) as pending_payment_amount
-      FROM payments
-      WHERE status = 'pending'
-      GROUP BY user_id
-    ) pend ON u.id = pend.user_id
-    LEFT JOIN (
-      SELECT 
-        winner_user_id, 
-        SUM(CASE WHEN payout_amount > 0 THEN payout_amount ELSE total_collected END) as total_debit,
-        COUNT(id) as rounds_won_count,
-        GROUP_CONCAT(month || '/' || year, ', ') as rounds_won_info
-      FROM committee_rounds
-      WHERE winner_user_id IS NOT NULL
-      GROUP BY winner_user_id
-    ) r ON u.id = r.winner_user_id
-    WHERE u.status IN ('active', 'inactive')
-    ORDER BY (CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END), u.name ASC
-  `).all();
-}
-
 // Get all members with full ledger details
 router.get('/', authMiddleware, (req, res) => {
-  const members = getMembersWithLedger();
+  const members = getMembersWithLedger(db);
   res.json({ data: members });
 });
 
@@ -124,14 +53,13 @@ router.put('/:id/reject-registration', authMiddleware, adminOnly, (req, res) => 
 
 // Dedicated Khata / Ledger summary of all members (Overall Total Credit, Debit, Late Fine)
 router.get('/ledger', authMiddleware, (req, res) => {
-  const members = getMembersWithLedger();
-
-  // Calculate overall totals
-  const totalCreditAll = members.reduce((sum, m) => sum + (m.total_credit || 0), 0);
-  const totalLateFineAll = members.reduce((sum, m) => sum + (m.total_late_fine || 0), 0);
-  const totalLateFineDueAll = members.reduce((sum, m) => sum + (m.late_fine_due || 0), 0);
-  const totalDebitAll = members.reduce((sum, m) => sum + (m.total_debit || 0), 0);
-  const netBalanceAll = (totalCreditAll + totalLateFineAll) - totalDebitAll;
+  const members = getMembersWithLedger(db);
+  const totals = calculateOverallTotals(members);
+  const totalCreditAll = totals.overallTotalCredit;
+  const totalLateFineAll = totals.overallTotalLateFine;
+  const totalLateFineDueAll = totals.overallTotalLateFineDue;
+  const totalDebitAll = totals.overallTotalDebit;
+  const netBalanceAll = totals.overallNetBalance;
 
   // Get chronological feed of recent transactions (Approved Deposits + Winner Payouts)
   const approvedPayments = db.prepare(`
@@ -276,7 +204,7 @@ router.get('/:id/statement', authMiddleware, (req, res) => {
 });
 
 // Admin Edit Member Khata / Ledger (Credit, Debit, Late Fine, Fine Due directly)
-router.put('/:id/ledger-adjustment', authMiddleware, adminOnly, (req, res) => {
+router.put('/:id/ledger-adjustment', authMiddleware, adminOnly, async (req, res) => {
   const memberId = parseInt(req.params.id);
   const { total_credit, total_debit, total_late_fine, late_fine_due, note } = req.body;
   const member = db.prepare('SELECT id, name, phone FROM users WHERE id = ?').get(memberId);
@@ -293,12 +221,25 @@ router.put('/:id/ledger-adjustment', authMiddleware, adminOnly, (req, res) => {
     WHERE id = ?
   `).run(creditVal, debitVal, fineVal, fineDueVal, memberId);
 
+  // If late_fine_due is set to 0 or null, clear any active unpaid fines and notifications
+  if (fineDueVal === 0) {
+    try {
+      db.prepare("DELETE FROM late_fines WHERE user_id = ? AND status = 'unpaid'").run(memberId);
+      db.prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'late_fine'").run(memberId);
+    } catch(e) {}
+  }
+
+  // Explicit sync to GitHub so the changes are saved permanently
+  try {
+    await db.syncToGitHub();
+  } catch(e) {}
+
   if (member.phone && note) {
     notifyWhatsApp(member.phone, `ℹ️ Mera Kameti Notice: Admin dwara aapka khata hisab update kiya gaya hai:\nKul Jama (Credit): Rs. ${creditVal !== null ? creditVal : 'N/A'}\nKul Uthaya (Debit): Rs. ${debitVal !== null ? debitVal : 'N/A'}\nLate Fine Jama: Rs. ${fineVal !== null ? fineVal : 'N/A'}\nLate Fine Bakaya (Due): Rs. ${fineDueVal !== null ? fineDueVal : 'N/A'}\nNote: ${note}`);
   }
 
   res.json({ 
-    message: `${member.name} ka khata hisab safaltapoorvak update ho gaya! ✅`,
+    message: `${member.name} का खाता हिसाब सफलतापूर्वक अपडेट हो गया! ✅`,
     data: { total_credit: creditVal, total_debit: debitVal, total_late_fine: fineVal, late_fine_due: fineDueVal }
   });
 });
@@ -378,17 +319,15 @@ router.post('/:id/late-fine', authMiddleware, adminOnly, (req, res) => {
     reason || 'समय पर किश्त जमा न करने पर'
   );
 
-  // If member had custom override, increment it
-  if (member.custom_late_fine_due !== null) {
-    db.prepare('UPDATE users SET custom_late_fine_due = custom_late_fine_due + ? WHERE id = ?')
-      .run(fineAmount, memberId);
-  }
-
   // Calculate updated total unpaid late fine due for this member
   const totalDueObj = db.prepare(
     "SELECT SUM(amount) as total FROM late_fines WHERE user_id = ? AND status = 'unpaid'"
   ).get(memberId);
   const totalDue = totalDueObj?.total || fineAmount;
+
+  // Sync custom_late_fine_due to the latest total unpaid fines
+  db.prepare('UPDATE users SET custom_late_fine_due = ? WHERE id = ?')
+    .run(totalDue, memberId);
 
   // Insert in-app notification for the member
   try {
@@ -437,7 +376,7 @@ router.get('/:id/late-fines', authMiddleware, (req, res) => {
 });
 
 // Admin Waive / Remove an Unpaid Late Fine
-router.delete('/:id/late-fine/:fineId', authMiddleware, adminOnly, (req, res) => {
+router.delete('/:id/late-fine/:fineId', authMiddleware, adminOnly, async (req, res) => {
   const memberId = parseInt(req.params.id);
   const fineId = parseInt(req.params.fineId);
 
@@ -446,13 +385,46 @@ router.delete('/:id/late-fine/:fineId', authMiddleware, adminOnly, (req, res) =>
 
   db.prepare("DELETE FROM late_fines WHERE id = ?").run(fineId);
 
-  // If user had custom_late_fine_due, deduct it
+  // Recalculate remaining unpaid late fines for this member
+  const remaining = db.prepare("SELECT COALESCE(SUM(amount), 0) as total FROM late_fines WHERE user_id = ? AND status = 'unpaid'").get(memberId);
+  const remainingDue = remaining?.total || 0;
+
   try {
-    db.prepare('UPDATE users SET custom_late_fine_due = MAX(0, custom_late_fine_due - ?) WHERE id = ? AND custom_late_fine_due IS NOT NULL')
-      .run(fine.amount, memberId);
+    db.prepare('UPDATE users SET custom_late_fine_due = ? WHERE id = ?')
+      .run(remainingDue > 0 ? remainingDue : 0, memberId);
+
+    if (remainingDue === 0) {
+      db.prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'late_fine'").run(memberId);
+    }
   } catch(e) {}
 
-  res.json({ message: `₹${fine.amount} का लेट फाइन सफलतापूर्वक माफ / हटा दिया गया! ✅` });
+  try {
+    await db.syncToGitHub();
+  } catch(e) {}
+
+  res.json({ 
+    message: `₹${fine.amount} का लेट फाइन सफलतापूर्वक माफ / हटा दिया गया! ✅`,
+    remainingDue
+  });
+});
+
+// Admin Waive / Remove ALL Unpaid Late Fines for a Member (One-click complete waiver)
+router.post('/:id/late-fine/waive-all', authMiddleware, adminOnly, async (req, res) => {
+  const memberId = parseInt(req.params.id);
+  const member = db.prepare('SELECT id, name FROM users WHERE id = ?').get(memberId);
+  if (!member) return res.status(404).json({ error: 'Member nahi mila.' });
+
+  db.prepare("DELETE FROM late_fines WHERE user_id = ? AND status = 'unpaid'").run(memberId);
+  db.prepare("UPDATE users SET custom_late_fine_due = 0 WHERE id = ?").run(memberId);
+  try {
+    db.prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'late_fine'").run(memberId);
+  } catch(e) {}
+
+  try {
+    await db.syncToGitHub();
+  } catch(e) {}
+
+  res.json({ message: `${member.name} के सभी लेट फाइन सफलतापूर्वक माफ / हटा दिए गए! (बकाया: ₹0) ✅` });
 });
 
 // Admin Reset Member Password

@@ -14,18 +14,23 @@ export default function Members() {
   const [whatsappLink, setWhatsappLink] = useState('https://chat.whatsapp.com/GRIBOkERb9E4nly5vDJKcG?s=cl&p=a&mlu=4&ilr=4&iam=2')
 
   // Late Fine Modal state
-  const [fineModal, setFineModal] = useState(null) // { memberId, memberName, phone }
+  const [fineModal, setFineModal] = useState(null) // { memberId, memberName, phone, currentDue }
+  const [fineModalTab, setFineModalTab] = useState('add') // 'add' | 'waive'
+  const [memberFines, setMemberFines] = useState([])
+  const [loadingFines, setLoadingFines] = useState(false)
+  const [actionFineLoading, setActionFineLoading] = useState(false)
   const [fineAmount, setFineAmount] = useState('')
   const [fineMonth, setFineMonth] = useState(now.getMonth() + 1)
   const [fineYear, setFineYear] = useState(now.getFullYear())
   const [fineReason, setFineReason] = useState('')
   const [submittingFine, setSubmittingFine] = useState(false)
 
-  // Direct Khata / Ledger Edit Modal state (Admin edit: Total Credit, Debit, Late Fine)
+  // Direct Khata / Ledger Edit Modal state (Admin edit: Total Credit, Debit, Late Fine, Late Fine Due)
   const [editKhataModal, setEditKhataModal] = useState(null)
   const [editCredit, setEditCredit] = useState('')
   const [editDebit, setEditDebit] = useState('')
   const [editLateFine, setEditLateFine] = useState('')
+  const [editLateFineDue, setEditLateFineDue] = useState('')
   const [editNote, setEditNote] = useState('')
   const [savingKhata, setSavingKhata] = useState(false)
 
@@ -76,6 +81,60 @@ export default function Members() {
     }
   }
 
+  const openFineModal = async (m, initialTab = 'add') => {
+    setFineModal({
+      memberId: m.id,
+      memberName: m.name,
+      phone: m.phone,
+      currentDue: m.late_fine_due || 0
+    })
+    setFineModalTab(initialTab)
+    setFineAmount('')
+    setFineReason('')
+    setLoadingFines(true)
+    try {
+      const res = await api.get(`/members/${m.id}/late-fines`)
+      setMemberFines(res.data?.data || [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingFines(false)
+    }
+  }
+
+  const handleWaiveSingleFine = async (fineId, amt) => {
+    if (!window.confirm(`क्या आप ₹${amt} का यह लेट फाइन हटाना / माफ़ करना चाहते हैं?`)) return
+    setActionFineLoading(true)
+    try {
+      const res = await api.delete(`/members/${fineModal.memberId}/late-fine/${fineId}`)
+      toast.success(res.data?.message || 'लेट फाइन हटा दिया गया! ✅')
+      const updated = await api.get(`/members/${fineModal.memberId}/late-fines`)
+      setMemberFines(updated.data?.data || [])
+      setFineModal(prev => prev ? { ...prev, currentDue: res.data?.remainingDue ?? 0 } : null)
+      fetchMembers()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'लेट फाइन हटाने में त्रुटि आई।')
+    } finally {
+      setActionFineLoading(false)
+    }
+  }
+
+  const handleWaiveAllFines = async () => {
+    if (!window.confirm(`⚠️ क्या आप "${fineModal.memberName}" के सभी बकाया लेट फाइन माफ़ करना चाहते हैं?\n\nबकाया राशि ₹0 हो जाएगी!`)) return
+    setActionFineLoading(true)
+    try {
+      const res = await api.post(`/members/${fineModal.memberId}/late-fine/waive-all`)
+      toast.success(res.data?.message || 'सभी लेट फाइन माफ़ कर दिए गए! (बकाया: ₹0) ✅')
+      setMemberFines([])
+      setFineModal(prev => prev ? { ...prev, currentDue: 0 } : null)
+      fetchMembers()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'लेट फाइन माफ़ करने में त्रुटि आई।')
+    } finally {
+      setActionFineLoading(false)
+    }
+  }
+
   const handleAddFine = async (e) => {
     e.preventDefault()
     if (!fineAmount || parseFloat(fineAmount) <= 0) {
@@ -122,6 +181,7 @@ export default function Members() {
         total_credit: editCredit,
         total_debit: editDebit,
         total_late_fine: editLateFine,
+        late_fine_due: editLateFineDue,
         note: editNote
       })
       toast.success(res.data?.message || 'खाता हिसाब अपडेट हो गया! ✅')
@@ -260,9 +320,19 @@ export default function Members() {
                     </td>
                     <td className="py-3.5 px-3 text-right">
                       {m.late_fine_due > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-300 shadow-sm animate-pulse">
-                          <span>⚠️</span> ₹{m.late_fine_due.toLocaleString('en-IN')} Due
-                        </span>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-300 shadow-sm animate-pulse">
+                            <span>⚠️</span> ₹{m.late_fine_due.toLocaleString('en-IN')} Due
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openFineModal(m, 'waive')}
+                            className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline flex items-center gap-0.5"
+                            title="बकाया लेट फाइन हटाएं या माफ़ करें"
+                          >
+                            <span>🗑️</span> हटाएं / माफ़ करें
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-gray-400 text-xs">₹0 (कोई बकाया नहीं)</span>
                       )}
@@ -299,6 +369,7 @@ export default function Members() {
                             setEditCredit(m.total_credit || 0)
                             setEditDebit(m.total_debit || 0)
                             setEditLateFine(m.total_late_fine || 0)
+                            setEditLateFineDue(m.late_fine_due || 0)
                             setEditNote('')
                           }}
                           className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 transition-colors flex items-center gap-1 shadow-sm"
@@ -307,17 +378,17 @@ export default function Members() {
                           <span>✏️</span> खाता एडिट
                         </button>
 
-                        {/* 2. Impose late fine button */}
+                        {/* 2. Impose / Manage late fine button */}
                         <button
-                          onClick={() => {
-                            setFineModal({ memberId: m.id, memberName: m.name, phone: m.phone, currentDue: m.late_fine_due || 0 })
-                            setFineAmount('')
-                            setFineReason('')
-                          }}
-                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors flex items-center gap-1 shadow-sm"
-                          title="लेट फाइन जोड़ें"
+                          onClick={() => openFineModal(m, m.late_fine_due > 0 ? 'waive' : 'add')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 shadow-sm ${
+                            m.late_fine_due > 0
+                              ? 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-300'
+                              : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                          }`}
+                          title="लेट फाइन जोड़ें या हटाएं"
                         >
-                          <span>⚡</span> लेट फाइन
+                          <span>⚡</span> लेट फाइन {m.late_fine_due > 0 && `(₹${m.late_fine_due})`}
                         </button>
 
                         {m.role !== 'admin' && (
@@ -429,7 +500,7 @@ export default function Members() {
               {/* Late Fine Input */}
               <div>
                 <label className="block text-xs font-bold text-amber-800 uppercase mb-1 flex items-center justify-between">
-                  <span>⚡ कुल लेट फाइन (Total Late Fine ₹)</span>
+                  <span>⚡ कुल लेट फाइन जमा (Total Late Fine Collected ₹)</span>
                   <span className="text-[10px] text-gray-400 font-normal">पहले था: ₹{editKhataModal.total_late_fine || 0}</span>
                 </label>
                 <input
@@ -441,7 +512,24 @@ export default function Members() {
                   value={editLateFine}
                   onChange={e => setEditLateFine(e.target.value)}
                 />
-                <p className="text-[11px] text-slate-500 mt-0.5">कुल लगाया गया लेट जुर्माना</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">अब तक जमा कुल लेट फाइन राशि</p>
+              </div>
+
+              {/* Late Fine Due (Bakaya) Input */}
+              <div>
+                <label className="block text-xs font-bold text-rose-800 uppercase mb-1 flex items-center justify-between">
+                  <span>⚠️ लेट फाइन बकाया (Late Fine Due ₹)</span>
+                  <span className="text-[10px] text-gray-400 font-normal">पहले था: ₹{editKhataModal.late_fine_due || 0}</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  className="input font-bold text-rose-700 text-lg"
+                  value={editLateFineDue}
+                  onChange={e => setEditLateFineDue(e.target.value)}
+                />
+                <p className="text-[11px] text-slate-500 mt-0.5">बकाया लेट फाइन (0 करने पर सदस्य का सारा फाइन माफ़ हो जाएगा)</p>
               </div>
 
               {/* Calculated Net Preview */}
@@ -487,22 +575,28 @@ export default function Members() {
         </div>
       )}
 
-      {/* Late Fine Modal for Admin */}
+      {/* Late Fine Modal for Admin (Add Due OR Waive / Remove) */}
       {fineModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-amber-200 space-y-4">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-amber-200 space-y-4">
+            
+            {/* Modal Header */}
             <div className="flex justify-between items-start">
               <div>
                 <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
-                  ⚡ लेट फाइन जोड़ें (Levy Late Fine)
+                  ⚡ लेट फाइन प्रबंधन (Late Fine Management)
                 </span>
                 <h2 className="text-xl font-black text-gray-900 mt-2">
                   {fineModal.memberName}
                 </h2>
                 <div className="flex items-center gap-2 mt-0.5">
                   <p className="text-xs text-gray-500 font-mono">📱 {fineModal.phone}</p>
-                  <span className="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                    वर्तमान बकाया: ₹{fineModal.currentDue || 0}
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                    fineModal.currentDue > 0
+                      ? 'text-rose-700 bg-rose-50 border-rose-200 animate-pulse'
+                      : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                  }`}>
+                    {fineModal.currentDue > 0 ? `वर्तमान बकाया: ₹${fineModal.currentDue} Due` : 'कोई बकाया नहीं (₹0)'}
                   </span>
                 </div>
               </div>
@@ -515,88 +609,218 @@ export default function Members() {
               </button>
             </div>
 
-            <form onSubmit={handleAddFine} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                  💵 लेट फाइन की रकम (Fine Amount in ₹) *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  placeholder="e.g. 100, 200, 500"
-                  className="input font-bold text-amber-800 text-lg"
-                  value={fineAmount}
-                  onChange={e => setFineAmount(e.target.value)}
-                  autoFocus
-                />
-              </div>
+            {/* Modal Navigation Tabs */}
+            <div className="flex border-b border-gray-200 bg-gray-50 rounded-xl p-1 gap-1">
+              <button
+                type="button"
+                onClick={() => setFineModalTab('add')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  fineModalTab === 'add'
+                    ? 'bg-white text-amber-900 shadow-sm border border-amber-200'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                <span>➕</span> नया फाइन लगाएं (Add Due)
+              </button>
+              <button
+                type="button"
+                onClick={() => setFineModalTab('waive')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  fineModalTab === 'waive'
+                    ? 'bg-white text-rose-900 shadow-sm border border-rose-200'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                <span>🗑️</span> हटाएं / माफ़ करें ({fineModal.currentDue > 0 ? `₹${fineModal.currentDue}` : '₹0'})
+              </button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
+            {/* TAB 1: ADD FINE DUE */}
+            {fineModalTab === 'add' && (
+              <form onSubmit={handleAddFine} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                    📅 महीना (Month)
+                    💵 लेट फाइन की रकम (Fine Amount in ₹) *
                   </label>
-                  <select
-                    className="input text-sm"
-                    value={fineMonth}
-                    onChange={e => setFineMonth(parseInt(e.target.value))}
-                  >
-                    {MONTH_NAMES.slice(1).map((m, idx) => (
-                      <option key={idx + 1} value={idx + 1}>{m}</option>
-                    ))}
-                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    placeholder="e.g. 50, 100, 200"
+                    className="input font-bold text-amber-800 text-lg"
+                    value={fineAmount}
+                    onChange={e => setFineAmount(e.target.value)}
+                    autoFocus
+                  />
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                      📅 महीना (Month)
+                    </label>
+                    <select
+                      className="input text-sm"
+                      value={fineMonth}
+                      onChange={e => setFineMonth(parseInt(e.target.value))}
+                    >
+                      {MONTH_NAMES.slice(1).map((m, idx) => (
+                        <option key={idx + 1} value={idx + 1}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                      📅 साल (Year)
+                    </label>
+                    <select
+                      className="input text-sm"
+                      value={fineYear}
+                      onChange={e => setFineYear(parseInt(e.target.value))}
+                    >
+                      {[2024, 2025, 2026, 2027].map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                    📅 साल (Year)
+                    📝 कारण या नोट (Reason / Note)
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    placeholder="e.g. 10 तारीख के बाद जमा करने का फाइन"
                     className="input text-sm"
-                    value={fineYear}
-                    onChange={e => setFineYear(parseInt(e.target.value))}
+                    value={fineReason}
+                    onChange={e => setFineReason(e.target.value)}
+                  />
+                </div>
+
+                <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
+                  💡 <strong>नियम:</strong> यह लेट फाइन सदस्य की ID पर <strong>Due (बकाया)</strong> के रूप में जुड़ेगा। आप इसे कभी भी "हटाएं / माफ़ करें" टैब से हटा सकते हैं।
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setFineModal(null)}
+                    className="flex-1 py-2.5 rounded-xl border border-gray-300 font-bold text-sm text-gray-700 hover:bg-gray-50 transition-all"
                   >
-                    {[2024, 2025, 2026, 2027].map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
+                    रद्द करें (Cancel)
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingFine}
+                    className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 font-bold text-sm text-white shadow-lg shadow-amber-600/30 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    {submittingFine ? 'जोड़ रहे हैं...' : '⚡ फाइन लगाएं'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* TAB 2: REMOVE / WAIVE DUE FINES */}
+            {fineModalTab === 'waive' && (
+              <div className="space-y-4">
+                <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-rose-800 uppercase block">कुल बकाया लेट फाइन (Total Due)</span>
+                    <span className="text-2xl font-black text-rose-700">₹ {fineModal.currentDue || 0}</span>
+                  </div>
+                  {fineModal.currentDue > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleWaiveAllFines}
+                      disabled={actionFineLoading}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-1"
+                    >
+                      <span>✨</span> सभी माफ़ करें (Reset to ₹0)
+                    </button>
+                  )}
+                </div>
+
+                {loadingFines ? (
+                  <div className="text-center py-6 text-gray-500 text-xs">
+                    फाइन रिकॉर्ड लोड हो रहे हैं...
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                      बकाया लेट फाइन की सूची:
+                    </h3>
+
+                    {memberFines.filter(f => f.status === 'unpaid').length === 0 ? (
+                      <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-center text-xs text-emerald-800 font-medium space-y-2">
+                        <p className="text-lg">✅</p>
+                        <p className="font-bold">इस सदस्य पर कोई सक्रिय लेट फाइन बकाया नहीं है।</p>
+                        {fineModal.currentDue > 0 && (
+                          <div className="pt-2">
+                            <p className="text-slate-600 text-[11px] mb-2">
+                              (खाते में कस्टम बकाया ₹{fineModal.currentDue} दर्ज है, इसे 0 करने के लिए नीचे बटन दबाएं)
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleWaiveAllFines}
+                              disabled={actionFineLoading}
+                              className="px-3 py-1.5 bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm"
+                            >
+                              बकाया ₹0 करें
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {memberFines.filter(f => f.status === 'unpaid').map(fine => (
+                          <div
+                            key={fine.id}
+                            className="p-3 bg-white border border-rose-200 rounded-xl flex items-center justify-between gap-2 shadow-sm hover:border-rose-300 transition-all"
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-black text-rose-700 text-base">₹{fine.amount}</span>
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                                  {MONTH_NAMES[fine.month]} {fine.year}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-600 mt-0.5">
+                                📝 {fine.reason || 'लेट फाइन'}
+                              </p>
+                              <span className="text-[10px] text-gray-400">
+                                लगाया: {fine.created_at ? new Date(fine.created_at).toLocaleDateString() : 'पूर्व'}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleWaiveSingleFine(fine.id, fine.amount)}
+                              disabled={actionFineLoading}
+                              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 border border-rose-300 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shrink-0"
+                              title="यह लेट फाइन हटाएं"
+                            >
+                              <span>🗑️</span> हटाएं
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setFineModal(null)}
+                    className="w-full py-2.5 rounded-xl border border-gray-300 font-bold text-sm text-gray-700 hover:bg-gray-50 transition-all"
+                  >
+                    बंद करें (Close)
+                  </button>
                 </div>
               </div>
+            )}
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-                  📝 कारण या नोट (Reason / Note)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 10 तारीख के बाद जमा करने का फाइन"
-                  className="input text-sm"
-                  value={fineReason}
-                  onChange={e => setFineReason(e.target.value)}
-                />
-              </div>
-
-              <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
-                💡 <strong>नियम:</strong> यह लेट फाइन सदस्य की ID पर <strong>Due (बकाया)</strong> के रूप में जुड़ेगा और कमिटी के सभी सदस्य इसे खाता-बही में देख सकते हैं। जब सदस्य इसे Pay (भुगतान) में जमा करेंगे और आप अप्रूव करेंगे, तो यह बकाया स्वतः समाप्त (0) हो जाएगा।
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setFineModal(null)}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-300 font-bold text-sm text-gray-700 hover:bg-gray-50 transition-all"
-                >
-                  रद्द करें (Cancel)
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingFine}
-                  className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 font-bold text-sm text-white shadow-lg shadow-amber-600/30 transition-all flex items-center justify-center gap-1.5"
-                >
-                  {submittingFine ? 'जोड़ रहे हैं...' : '⚡ फाइन लगाएं'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

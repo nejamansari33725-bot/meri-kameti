@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { notifyWhatsApp } = require('../utils/whatsapp');
+const { getMembersWithLedger, calculateOverallTotals } = require('../utils/ledger');
 
 // Get all committee rounds
 router.get('/rounds', authMiddleware, (req, res) => {
@@ -54,22 +55,10 @@ router.get('/summary', authMiddleware, (req, res) => {
     WHERE month = ? AND year = ? AND status = 'approved'
   `).get(month, year);
 
-  // Lifetime Overall Credit (All approved payments)
-  const allCredit = db.prepare(`
-    SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'approved'
-  `).get();
-
-  // Lifetime Overall Late Fine
-  const allLateFine = db.prepare(`
-    SELECT COALESCE(SUM(COALESCE(late_fine, 0)), 0) as total FROM payments WHERE status = 'approved'
-  `).get();
-
-  // Lifetime Overall Debit (All payouts to winners)
-  const allDebit = db.prepare(`
-    SELECT COALESCE(SUM(CASE WHEN payout_amount > 0 THEN payout_amount ELSE total_collected END), 0) as total
-    FROM committee_rounds
-    WHERE winner_user_id IS NOT NULL
-  `).get();
+  // Lifetime Overall Credit, Late Fine, Debit, Net Balance
+  // Accurately reflects member ledger adjustments (custom_credit, custom_debit, custom_late_fine)
+  const members = getMembersWithLedger(db);
+  const totals = calculateOverallTotals(members);
 
   res.json({
     data: {
@@ -80,10 +69,11 @@ router.get('/summary', authMiddleware, (req, res) => {
       winner: winner || null,
       totalMembers: totalMembers.count,
       paidMembers: paidMembers.count,
-      overallTotalCredit: allCredit.total,
-      overallTotalLateFine: allLateFine.total,
-      overallTotalDebit: allDebit.total,
-      overallNetBalance: (allCredit.total + allLateFine.total) - allDebit.total
+      overallTotalCredit: totals.overallTotalCredit,
+      overallTotalLateFine: totals.overallTotalLateFine,
+      overallTotalLateFineDue: totals.overallTotalLateFineDue,
+      overallTotalDebit: totals.overallTotalDebit,
+      overallNetBalance: totals.overallNetBalance
     }
   });
 });
