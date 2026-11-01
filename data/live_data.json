@@ -151,7 +151,7 @@
       "email": "imranansari995535@gmail.com",
       "password": "$2a$10$S8.9Uv/L73vQv8KOdmiMA./HpGgfi3D/0mH.5E1IvRmQsmIZWQS4W",
       "role": "member",
-      "status": "pending",
+      "status": "active",
       "profile_photo": null,
       "security_hint": null,
       "custom_credit": null,
@@ -220,5 +220,5 @@
   "late_fines": [],
   "payout_requests": [],
   "notifications": [],
-  "exported_at": "2026-11-01T18:07:23.904Z"
+  "exported_at": "2026-11-01T18:14:42.294Z"
 }
