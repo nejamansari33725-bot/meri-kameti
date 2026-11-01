@@ -95,6 +95,22 @@
       "custom_late_fine": null,
       "custom_late_fine_due": null,
       "created_at": "2026-11-01 05:12:28"
+    },
+    {
+      "id": 8,
+      "name": "Md Daud Ansari",
+      "phone": "8928266140",
+      "email": "mrdaud78692@gmail.com",
+      "password": "$2a$10$cLnfhgGDjunqpd.JvzTJHOuT9SK9rTC06mn7I3zltEWls4X8TCcoq",
+      "role": "member",
+      "status": "pending",
+      "profile_photo": null,
+      "security_hint": null,
+      "custom_credit": null,
+      "custom_debit": null,
+      "custom_late_fine": null,
+      "custom_late_fine_due": null,
+      "created_at": "2026-11-01 05:12:42"
     }
   ],
   "payments": [
@@ -339,5 +355,5 @@
       "created_at": "2026-10-30 18:08:35"
     }
   ],
-  "exported_at": "2026-11-01T05:12:28.493Z"
+  "exported_at": "2026-11-01T05:12:42.105Z"
 }
