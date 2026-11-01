@@ -114,16 +114,6 @@ async function refreshFromGitHub(force = false) {
 async function syncToGitHub() {
   if (!db) return;
   try {
-    const payload = dumpDatabaseToJSON();
-    const jsonStr = JSON.stringify(payload, null, 2);
-    const base64Content = Buffer.from(jsonStr).toString('base64');
-
-    try {
-      if (fs.existsSync(path.dirname(liveDataPath))) {
-        fs.writeFileSync(liveDataPath, jsonStr, 'utf8');
-      }
-    } catch (e) {}
-
     let sha = currentSha;
     try {
       const getRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
@@ -136,6 +126,26 @@ async function syncToGitHub() {
       if (getRes.ok) {
         const meta = await getRes.json();
         sha = meta.sha;
+        // Merge remote changes if remote has updates we don't have
+        if (meta.content && meta.sha !== currentSha) {
+          try {
+            const remoteStr = Buffer.from(meta.content, 'base64').toString('utf8');
+            const remoteData = JSON.parse(remoteStr);
+            if (remoteData && Array.isArray(remoteData.users)) {
+              populateTables(remoteData);
+            }
+          } catch(e) {}
+        }
+      }
+    } catch (e) {}
+
+    const payload = dumpDatabaseToJSON();
+    const jsonStr = JSON.stringify(payload, null, 2);
+    const base64Content = Buffer.from(jsonStr).toString('base64');
+
+    try {
+      if (fs.existsSync(path.dirname(liveDataPath))) {
+        fs.writeFileSync(liveDataPath, jsonStr, 'utf8');
       }
     } catch (e) {}
 
