@@ -167,7 +167,7 @@
       "email": "shahjad9905676641@gmail.com",
       "password": "$2a$10$tFumfQLMHjDEJtAfG5I91OkgqqWUWu2so82LvCIT6kb93u6oE1qG2",
       "role": "member",
-      "status": "pending",
+      "status": "active",
       "profile_photo": null,
       "security_hint": null,
       "custom_credit": null,
@@ -236,5 +236,5 @@
   "late_fines": [],
   "payout_requests": [],
   "notifications": [],
-  "exported_at": "2026-11-02T06:02:33.029Z"
+  "exported_at": "2026-11-02T06:02:38.700Z"
 }
