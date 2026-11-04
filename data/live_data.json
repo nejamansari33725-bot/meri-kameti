@@ -183,7 +183,7 @@
       "email": "kaujaan786@gmail.com",
       "password": "$2a$10$J0Mx5ebAHeBcL5sXerS6D.bZM97P9fohVjGqWbd4zG03lbGAxxeWW",
       "role": "member",
-      "status": "pending",
+      "status": "active",
       "profile_photo": null,
       "security_hint": null,
       "custom_credit": null,
@@ -252,5 +252,5 @@
   "late_fines": [],
   "payout_requests": [],
   "notifications": [],
-  "exported_at": "2026-11-04T05:02:54.696Z"
+  "exported_at": "2026-11-04T05:04:25.963Z"
 }
