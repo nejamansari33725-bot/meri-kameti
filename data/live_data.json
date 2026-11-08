@@ -199,7 +199,7 @@
       "email": "mrfaiyaz78609@gmail.com",
       "password": "$2a$10$DffzDZG4PpOfE0IHVrLoJ.UMkw1eF532.tvbxiKcm6kqBo8fdvTYW",
       "role": "member",
-      "status": "pending",
+      "status": "active",
       "profile_photo": null,
       "security_hint": null,
       "custom_credit": null,
@@ -268,5 +268,5 @@
   "late_fines": [],
   "payout_requests": [],
   "notifications": [],
-  "exported_at": "2026-11-08T10:56:03.398Z"
+  "exported_at": "2026-11-08T10:56:09.696Z"
 }
