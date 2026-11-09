@@ -215,7 +215,7 @@
       "email": "sohelansari000001@gmail.com",
       "password": "$2a$10$wsPiPooYIarLVgSBhZHebeIvPhbdbQWJV593DP/j8Dc0AvEEbn73.",
       "role": "member",
-      "status": "pending",
+      "status": "active",
       "profile_photo": null,
       "security_hint": null,
       "custom_credit": null,
@@ -284,5 +284,5 @@
   "late_fines": [],
   "payout_requests": [],
   "notifications": [],
-  "exported_at": "2026-11-09T17:09:34.751Z"
+  "exported_at": "2026-11-09T17:09:38.886Z"
 }
