@@ -113,22 +113,6 @@
       "created_at": "2026-11-01 11:29:19"
     },
     {
-      "id": 10,
-      "name": "Kalam ali",
-      "phone": "8292602553",
-      "email": null,
-      "password": "$2a$10$uwnYpOGHk.575RcVhjJ1Iu2XWxoHSzx.Fh4gb1nEfLJKECOojT1DK",
-      "role": "member",
-      "status": "active",
-      "profile_photo": null,
-      "security_hint": null,
-      "custom_credit": null,
-      "custom_debit": null,
-      "custom_late_fine": null,
-      "custom_late_fine_due": null,
-      "created_at": "2026-11-01 15:12:19"
-    },
-    {
       "id": 11,
       "name": "Aashif Rock",
       "phone": "9060367639",
@@ -380,5 +364,5 @@
       "created_at": "2026-11-10 14:04:11"
     }
   ],
-  "exported_at": "2026-11-10T14:25:59.434Z"
+  "exported_at": "2026-11-10T14:28:57.970Z"
 }
