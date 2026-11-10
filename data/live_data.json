@@ -285,10 +285,10 @@
       "note": null,
       "month": 11,
       "year": 2026,
-      "status": "pending",
-      "admin_note": null,
+      "status": "approved",
+      "admin_note": "Ok",
       "submitted_at": "2026-11-10 14:03:09",
-      "reviewed_at": null
+      "reviewed_at": "2026-11-10 14:04:11"
     }
   ],
   "committee_rounds": [
@@ -360,7 +360,25 @@
       "type": "payment_approved",
       "is_read": 0,
       "created_at": "2026-11-10 13:47:15"
+    },
+    {
+      "id": 3,
+      "user_id": 13,
+      "title": "✅ पेमेंट स्वीकृत (Payment Approved) - 11/2026",
+      "message": "आपकी ₹500 की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
+      "type": "payment_approved",
+      "is_read": 0,
+      "created_at": "2026-11-10 14:03:20"
+    },
+    {
+      "id": 4,
+      "user_id": 13,
+      "title": "✅ पेमेंट स्वीकृत (Payment Approved) - 11/2026",
+      "message": "आपकी ₹500 की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
+      "type": "payment_approved",
+      "is_read": 0,
+      "created_at": "2026-11-10 14:04:11"
     }
   ],
-  "exported_at": "2026-11-10T14:03:52.377Z"
+  "exported_at": "2026-11-10T14:04:11.788Z"
 }
