@@ -349,10 +349,10 @@
       "note": null,
       "month": 11,
       "year": 2026,
-      "status": "pending",
-      "admin_note": null,
+      "status": "approved",
+      "admin_note": "Done",
       "submitted_at": "2026-11-11 13:46:15",
-      "reviewed_at": null
+      "reviewed_at": "2026-11-11 13:46:34"
     }
   ],
   "committee_rounds": [
@@ -469,7 +469,16 @@
       "type": "payment_approved",
       "is_read": 0,
       "created_at": "2026-11-11 13:20:51"
+    },
+    {
+      "id": 8,
+      "user_id": 9,
+      "title": "✅ पेमेंट स्वीकृत (Payment Approved) - 11/2026",
+      "message": "आपकी ₹500 की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
+      "type": "payment_approved",
+      "is_read": 0,
+      "created_at": "2026-11-11 13:46:34"
     }
   ],
-  "exported_at": "2026-11-11T13:46:22.175Z"
+  "exported_at": "2026-11-11T13:46:34.086Z"
 }
