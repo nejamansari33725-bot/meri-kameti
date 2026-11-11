@@ -231,7 +231,7 @@
       "email": "mdmoinalii12222@gmail.com",
       "password": "$2a$10$mJ9IQfIyfvP0je4E0Vi.W.Xjd0aWphNA/O0vpNYTjqG.76PpxuQIW",
       "role": "member",
-      "status": "pending",
+      "status": "active",
       "profile_photo": null,
       "security_hint": null,
       "custom_credit": null,
@@ -546,5 +546,5 @@
       "created_at": "2026-11-11 15:26:04"
     }
   ],
-  "exported_at": "2026-11-11T18:48:30.713Z"
+  "exported_at": "2026-11-11T18:51:06.325Z"
 }
