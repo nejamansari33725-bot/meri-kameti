@@ -186,10 +186,10 @@
       "status": "active",
       "profile_photo": null,
       "security_hint": null,
-      "custom_credit": null,
-      "custom_debit": null,
-      "custom_late_fine": null,
-      "custom_late_fine_due": null,
+      "custom_credit": 500,
+      "custom_debit": 0,
+      "custom_late_fine": 0,
+      "custom_late_fine_due": 0,
       "created_at": "2026-11-08 10:56:03"
     },
     {
@@ -405,5 +405,5 @@
       "created_at": "2026-11-11 08:07:04"
     }
   ],
-  "exported_at": "2026-11-11T08:12:21.652Z"
+  "exported_at": "2026-11-11T11:50:46.136Z"
 }
