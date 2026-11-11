@@ -333,10 +333,10 @@
       "note": null,
       "month": 11,
       "year": 2026,
-      "status": "pending",
-      "admin_note": null,
+      "status": "approved",
+      "admin_note": "Done",
       "submitted_at": "2026-11-11 13:20:11",
-      "reviewed_at": null
+      "reviewed_at": "2026-11-11 13:20:51"
     }
   ],
   "committee_rounds": [
@@ -444,7 +444,16 @@
       "type": "payment_approved",
       "is_read": 0,
       "created_at": "2026-11-11 12:56:28"
+    },
+    {
+      "id": 7,
+      "user_id": 4,
+      "title": "✅ पेमेंट स्वीकृत (Payment Approved) - 11/2026",
+      "message": "आपकी ₹500 (+ ₹10 लेट फाइन) की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
+      "type": "payment_approved",
+      "is_read": 0,
+      "created_at": "2026-11-11 13:20:51"
     }
   ],
-  "exported_at": "2026-11-11T13:20:34.212Z"
+  "exported_at": "2026-11-11T13:20:51.311Z"
 }
