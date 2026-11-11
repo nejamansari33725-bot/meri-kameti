@@ -138,7 +138,7 @@
       "status": "active",
       "profile_photo": "/uploads/avatar_1793557702385.png",
       "security_hint": null,
-      "custom_credit": 0,
+      "custom_credit": 500,
       "custom_debit": 0,
       "custom_late_fine": 0,
       "custom_late_fine_due": 0,
@@ -381,10 +381,10 @@
       "note": null,
       "month": 11,
       "year": 2026,
-      "status": "pending",
+      "status": "approved",
       "admin_note": null,
       "submitted_at": "2026-11-11 15:25:45",
-      "reviewed_at": null
+      "reviewed_at": "2026-11-11 15:26:04"
     }
   ],
   "committee_rounds": [
@@ -519,7 +519,16 @@
       "type": "payment_approved",
       "is_read": 0,
       "created_at": "2026-11-11 13:49:57"
+    },
+    {
+      "id": 10,
+      "user_id": 12,
+      "title": "✅ पेमेंट स्वीकृत (Payment Approved) - 11/2026",
+      "message": "आपकी ₹500 की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
+      "type": "payment_approved",
+      "is_read": 0,
+      "created_at": "2026-11-11 15:26:04"
     }
   ],
-  "exported_at": "2026-11-11T15:25:53.151Z"
+  "exported_at": "2026-11-11T15:26:04.512Z"
 }
