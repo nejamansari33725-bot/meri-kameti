@@ -255,6 +255,22 @@
       "custom_late_fine": null,
       "custom_late_fine_due": null,
       "created_at": "2026-11-11 18:53:45"
+    },
+    {
+      "id": 20,
+      "name": "Badal kumar",
+      "phone": "9508626762",
+      "email": "badalray279@gmail.com",
+      "password": "$2a$10$CfKh.7n.7ee1H6UqxNjDyO.7c/BOHUpiJpjo6qzFe50/jLw.O5nI2",
+      "role": "member",
+      "status": "pending",
+      "profile_photo": null,
+      "security_hint": null,
+      "custom_credit": null,
+      "custom_debit": null,
+      "custom_late_fine": null,
+      "custom_late_fine_due": null,
+      "created_at": "2026-11-13 13:23:03"
     }
   ],
   "payments": [
@@ -637,5 +653,5 @@
       "created_at": "2026-11-11 19:09:28"
     }
   ],
-  "exported_at": "2026-11-13T13:20:35.862Z"
+  "exported_at": "2026-11-13T13:23:04.085Z"
 }
