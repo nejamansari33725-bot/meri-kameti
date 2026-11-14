@@ -577,6 +577,22 @@
       "admin_note": null,
       "submitted_at": "2026-11-14 14:21:28",
       "reviewed_at": "2026-11-14T14:21:28.121Z"
+    },
+    {
+      "id": 20,
+      "user_id": 23,
+      "amount": 500,
+      "late_fine": 0,
+      "repayment_amount": 0,
+      "screenshot_path": null,
+      "reference_no": null,
+      "note": null,
+      "month": 11,
+      "year": 2026,
+      "status": "approved",
+      "admin_note": null,
+      "submitted_at": "2026-11-14 14:51:20",
+      "reviewed_at": "2026-11-14 14:51:26"
     }
   ],
   "committee_rounds": [
@@ -765,7 +781,16 @@
       "type": "payment_approved",
       "is_read": 0,
       "created_at": "2026-11-14 12:46:09"
+    },
+    {
+      "id": 16,
+      "user_id": 23,
+      "title": "✅ पेमेंट स्वीकृत (Payment Approved) - 11/2026",
+      "message": "आपकी ₹500 की पेमेंट एडमिन द्वारा स्वीकृत कर दी गई है।",
+      "type": "payment_approved",
+      "is_read": 0,
+      "created_at": "2026-11-14 14:51:26"
     }
   ],
-  "exported_at": "2026-11-14T14:51:20.339Z"
+  "exported_at": "2026-11-14T14:51:26.392Z"
 }
