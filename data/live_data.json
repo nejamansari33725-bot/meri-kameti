@@ -295,7 +295,7 @@
       "email": "nejamansari33725@gmail.com",
       "password": "$2a$10$N6iWzcdBhPet9zQZLmE0aOdcmgzOucOXAurytJ97NtJPkxsotJEMK",
       "role": "member",
-      "status": "pending",
+      "status": "rejected",
       "profile_photo": null,
       "security_hint": null,
       "custom_credit": null,
@@ -767,5 +767,5 @@
       "created_at": "2026-11-14 12:46:09"
     }
   ],
-  "exported_at": "2026-11-14T14:41:41.941Z"
+  "exported_at": "2026-11-14T14:44:00.156Z"
 }
