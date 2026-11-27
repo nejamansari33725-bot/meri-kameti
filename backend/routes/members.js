@@ -427,6 +427,41 @@ router.post('/:id/late-fine/waive-all', authMiddleware, adminOnly, async (req, r
   res.json({ message: `${member.name} के सभी लेट फाइन सफलतापूर्वक माफ / हटा दिए गए! (बकाया: ₹0) ✅` });
 });
 
+// Admin Edit Member Name & Phone (Admin Only)
+router.put('/:id/edit-details', authMiddleware, adminOnly, async (req, res) => {
+  const memberId = parseInt(req.params.id);
+  const { name, phone } = req.body;
+
+  let member = db.prepare('SELECT id, name, phone, role FROM users WHERE id = ?').get(memberId);
+  if (!member) {
+    try {
+      await db.refreshFromGitHub(true);
+      member = db.prepare('SELECT id, name, phone, role FROM users WHERE id = ?').get(memberId);
+    } catch (e) {}
+  }
+  if (!member) return res.status(404).json({ error: 'Member nahi mila.' });
+
+  const updatedName = name && name.trim() ? name.trim() : member.name;
+  let updatedPhone = member.phone;
+
+  if (phone && phone.trim() && phone.trim() !== member.phone) {
+    const cleanPhone = phone.trim();
+    const existing = db.prepare('SELECT id FROM users WHERE phone = ? AND id != ?').get(cleanPhone, memberId);
+    if (existing) {
+      return res.status(400).json({ error: 'Yeh phone number pehle se kisi aur sadasya ke pass registered hai.' });
+    }
+    updatedPhone = cleanPhone;
+  }
+
+  db.prepare('UPDATE users SET name = ?, phone = ? WHERE id = ?').run(updatedName, updatedPhone, memberId);
+  await db.syncToGitHub();
+
+  res.json({
+    message: `${updatedName} का विवरण सफलतापूर्वक अपडेट हो गया! ✅`,
+    data: { id: memberId, name: updatedName, phone: updatedPhone }
+  });
+});
+
 // Admin Reset Member Password
 router.put('/:id/reset-password', authMiddleware, adminOnly, async (req, res) => {
   const memberId = parseInt(req.params.id);

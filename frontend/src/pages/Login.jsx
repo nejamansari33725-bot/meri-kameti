@@ -175,17 +175,17 @@ export default function Login() {
             <div className="flex justify-between items-start">
               <div>
                 <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest ${
-                  isAdmin ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-100 text-emerald-800'
+                  isAdmin ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-100 text-slate-800'
                 }`}>
-                  {isAdmin ? '👑 ADMIN PASSWORD RESET' : 'MEMBER PASSWORD RESET'}
+                  {isAdmin ? '👑 ADMIN PASSWORD RESET' : '🔒 SECURITY POLICY'}
                 </span>
                 <h2 className="text-xl font-black text-slate-900 mt-1">
-                  पासवर्ड भूल गए? (Reset Password)
+                  पासवर्ड सहायता (Password Help)
                 </h2>
                 <p className="text-xs text-slate-500">
                   {isAdmin 
                     ? 'एडमिन पासवर्ड बदलने के लिए मोबाइल नंबर, सुरक्षा हिंट व नया पासवर्ड दर्ज करें'
-                    : 'अपना रजिस्टर्ड मोबाइल नंबर व नाम दर्ज करके नया पासवर्ड बनाएं'}
+                    : 'सदस्यों के पासवर्ड केवल मुख्य एडमिन (MD NEJAM ANSARI) द्वारा रीसेट किए जाते हैं'}
                 </p>
               </div>
               <button
@@ -205,12 +205,12 @@ export default function Login() {
               {/* 1. Mobile Number */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  📱 रजिस्टर्ड मोबाइल नंबर *
+                  📱 मोबाइल नंबर (Mobile Number) *
                 </label>
                 <input
                   type="tel"
                   required
-                  placeholder="e.g. 9876543210 या 8434776690"
+                  placeholder="अपना 10 अंकों का मोबाइल नंबर दर्ज करें"
                   className="input font-mono text-sm"
                   value={forgotForm.phone}
                   onChange={e => {
@@ -225,23 +225,26 @@ export default function Login() {
                 />
               </div>
 
-              {/* 2. Member Name (Only for normal members) */}
+              {/* Notice for Regular Members: Admin Only can reset! */}
               {!isAdmin && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    👤 रजिस्टर्ड नाम (Member Full Name) *
-                  </label>
-                  <input
-                    type="text"
-                    required={!isAdmin}
-                    placeholder="आपका रजिस्टर्ड नाम..."
-                    className="input text-sm"
-                    value={forgotForm.name}
-                    onChange={e => setForgotForm({ ...forgotForm, name: e.target.value })}
-                  />
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    सुरक्षा के लिए आपका नाम रजिस्टर्ड रिकॉर्ड से मिलना ज़रूरी है।
+                <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 text-xs text-amber-950 space-y-2.5">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-900 text-sm">
+                    <span>🔒</span> सुरक्षा नियम: सदस्य पासवर्ड केवल एडमिन बदल सकते हैं
+                  </div>
+                  <p className="text-slate-600 leading-relaxed">
+                    कमेटी खाते की सुरक्षा के लिए कोई भी अन्य व्यक्ति किसी सदस्य का पासवर्ड सीधे नहीं बदल सकता। सदस्य का नाम व पासवर्ड केवल मुख्य एडमिन द्वारा ही रीसेट किया जा सकता है।
                   </p>
+                  <p className="font-bold text-slate-800">
+                    अपना पासवर्ड रीसेट करवाने के लिए कृपया मुख्य एडमिन से संपर्क करें:
+                  </p>
+                  <a
+                    href="https://wa.me/918434776690?text=Namaste%20Nejam%20bhai,%20mera%20Mera%20Kameti%20password%20reset%20karna%20hai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md text-xs transition-colors"
+                  >
+                    💬 एडमिन को WhatsApp करें (MD NEJAM ANSARI - 8434776690)
+                  </a>
                 </div>
               )}
 
@@ -270,55 +273,53 @@ export default function Login() {
                 </div>
               )}
 
-              {/* 4. New Password */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  🔑 नया पासवर्ड (New Password) *
-                </label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  placeholder="कम से कम 6 अक्षर..."
-                  className="input text-sm"
-                  value={forgotForm.new_password}
-                  onChange={e => setForgotForm({ ...forgotForm, new_password: e.target.value })}
-                />
-              </div>
+              {/* Password Fields only for Admin */}
+              {isAdmin && (
+                <>
+                  {/* 4. New Password */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      🔑 नया पासवर्ड (New Password) *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      placeholder="कम से कम 6 अक्षर..."
+                      className="input text-sm"
+                      value={forgotForm.new_password}
+                      onChange={e => setForgotForm({ ...forgotForm, new_password: e.target.value })}
+                    />
+                  </div>
 
-              {/* 5. Confirm Password */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  🔒 नया पासवर्ड दोबारा लिखें (Confirm Password) *
-                </label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  placeholder="वही पासवर्ड दोबारा लिखें..."
-                  className="input text-sm"
-                  value={forgotForm.confirm_password}
-                  onChange={e => setForgotForm({ ...forgotForm, confirm_password: e.target.value })}
-                />
-              </div>
+                  {/* 5. Confirm Password */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      🔒 नया पासवर्ड दोबारा लिखें (Confirm Password) *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      placeholder="वही पासवर्ड दोबारा लिखें..."
+                      className="input text-sm"
+                      value={forgotForm.confirm_password}
+                      onChange={e => setForgotForm({ ...forgotForm, confirm_password: e.target.value })}
+                    />
+                  </div>
 
-              {/* Submit Button */}
-              <div className="pt-2 flex flex-col gap-2">
-                <button
-                  type="submit"
-                  disabled={forgotLoading}
-                  className={`w-full py-3 text-sm font-bold shadow-md rounded-xl text-white transition-all ${
-                    isAdmin 
-                      ? 'bg-amber-600 hover:bg-amber-700 active:scale-[0.98]' 
-                      : 'btn-primary'
-                  }`}
-                >
-                  {forgotLoading 
-                    ? '⏳ पासवर्ड बदल रहे हैं...' 
-                    : isAdmin 
-                      ? '👑 एडमिन पासवर्ड रीसेट करें' 
-                      : '✅ पासवर्ड रीसेट करें'}
-                </button>
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="w-full py-3 text-sm font-bold shadow-md rounded-xl text-white transition-all bg-amber-600 hover:bg-amber-700 active:scale-[0.98]"
+                    >
+                      {forgotLoading ? '⏳ पासवर्ड बदल रहे हैं...' : '👑 एडमिन पासवर्ड रीसेट करें'}
+                    </button>
+                  </div>
+                </>
+              )}
 
                 {/* WhatsApp Help Option */}
                 <a

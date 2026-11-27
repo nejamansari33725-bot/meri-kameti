@@ -65,24 +65,54 @@ function scheduleGitHubSync() {
 }
 
 async function fetchFromGitHub() {
+  // 1. First attempt: Direct fetch from raw.githubusercontent.com (Public, no token required, never expires, immune to 401)
   try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'User-Agent': 'MeraKameti-Sync',
-        'Accept': 'application/vnd.github.v3+json'
-      }
+    const rawRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${GITHUB_FILE}?_t=${Date.now()}`, {
+      headers: { 'User-Agent': 'MeraKameti-Sync' }
     });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (!json.content) return null;
-    const decoded = Buffer.from(json.content, 'base64').toString('utf8');
-    const parsed = JSON.parse(decoded);
-    return { data: parsed, sha: json.sha };
+    if (rawRes.ok) {
+      const parsed = await rawRes.json();
+      if (parsed && Array.isArray(parsed.users) && parsed.users.length > 0) {
+        console.log(`🌐 Successfully fetched ${parsed.users.length} members directly from raw GitHub!`);
+        return { data: parsed, sha: 'raw-' + Date.now() };
+      }
+    }
   } catch (e) {
-    console.warn('⚠️ fetchFromGitHub failed:', e.message);
-    return null;
+    console.warn('⚠️ raw.githubusercontent.com fetch warning:', e.message);
   }
+
+  // 2. Second attempt: GitHub REST API (with or without token)
+  try {
+    const headers = {
+      'User-Agent': 'MeraKameti-Sync',
+      'Accept': 'application/vnd.github.v3+json'
+    };
+    if (GITHUB_TOKEN && !GITHUB_TOKEN.includes('osqaLnw3O1vHCDgtRzse8wbte3cPhC1aYLic')) {
+      headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+    }
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, { headers });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.content) {
+        const decoded = Buffer.from(json.content, 'base64').toString('utf8');
+        const parsed = JSON.parse(decoded);
+        return { data: parsed, sha: json.sha };
+      }
+    }
+  } catch (e) {
+    console.warn('⚠️ GitHub API fetch warning:', e.message);
+  }
+
+  // 3. Third attempt: Bundled local live_data.json fallback
+  try {
+    const bundled = require('../data/live_data.json');
+    if (bundled && Array.isArray(bundled.users) && bundled.users.length > 0) {
+      console.log(`📦 Loaded ${bundled.users.length} members from local bundled live_data.json fallback`);
+      return { data: bundled, sha: 'bundled-local' };
+    }
+  } catch (e) {}
+
+  return null;
 }
 
 async function refreshFromGitHub(force = false) {
@@ -98,14 +128,15 @@ async function refreshFromGitHub(force = false) {
       return;
     }
 
-    if (!force && currentSha && remote.sha === currentSha) {
+    const dataHash = require('crypto').createHash('md5').update(JSON.stringify(remote.data)).digest('hex');
+    if (!force && currentSha && dataHash === currentSha) {
       return; // Already up to date
     }
 
-    currentSha = remote.sha;
+    currentSha = dataHash;
     populateTables(remote.data);
     saveToDisk();
-    console.log(`🔄 Refreshed database state from GitHub! (SHA: ${currentSha.substring(0, 7)})`);
+    console.log(`🔄 Refreshed database state from GitHub! (${remote.data.users.length} members loaded)`);
   } catch (err) {
     console.warn('⚠️ refreshFromGitHub error:', err.message);
   }
@@ -438,9 +469,9 @@ async function populateFromLiveData() {
     const remote = await fetchFromGitHub();
     if (remote && remote.data && Array.isArray(remote.data.users) && remote.data.users.length > 0) {
       loadedData = remote.data;
-      currentSha = remote.sha;
+      currentSha = require('crypto').createHash('md5').update(JSON.stringify(loadedData)).digest('hex');
       lastRefreshTime = Date.now();
-      console.log(`🌐 Loaded latest live data directly from GitHub (SHA: ${currentSha.substring(0, 7)})`);
+      console.log(`🌐 Loaded latest live data directly from GitHub (${loadedData.users.length} members loaded)`);
     }
   } catch (e) {
     console.warn('⚠️ GitHub initial fetch failed:', e.message);

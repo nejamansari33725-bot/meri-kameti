@@ -34,6 +34,39 @@ export default function Members() {
   const [editNote, setEditNote] = useState('')
   const [savingKhata, setSavingKhata] = useState(false)
 
+  // Edit Member Name & Phone Modal State (Admin Only)
+  const [editMemberModal, setEditMemberModal] = useState(null)
+  const [editMemberName, setEditMemberName] = useState('')
+  const [editMemberPhone, setEditMemberPhone] = useState('')
+  const [savingMemberDetails, setSavingMemberDetails] = useState(false)
+
+  const openEditMemberModal = (m) => {
+    setEditMemberModal(m)
+    setEditMemberName(m.name || '')
+    setEditMemberPhone(m.phone || '')
+  }
+
+  const handleSaveMemberDetails = async (e) => {
+    e.preventDefault()
+    if (!editMemberName.trim() || !editMemberPhone.trim()) {
+      return toast.error('नाम और मोबाइल नंबर दोनों आवश्यक हैं।')
+    }
+    setSavingMemberDetails(true)
+    try {
+      const res = await api.put(`/members/${editMemberModal.id}/edit-details`, {
+        name: editMemberName.trim(),
+        phone: editMemberPhone.trim()
+      })
+      toast.success(res.data?.message || 'विवरण सफलतापूर्वक अपडेट हो गया! ✅')
+      setEditMemberModal(null)
+      fetchMembers()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'अपडेट करने में त्रुटि आई।')
+    } finally {
+      setSavingMemberDetails(false)
+    }
+  }
+
   const fetchMembers = () => {
     api.get('/settings').then(res => {
       if (res.data?.data?.whatsapp_group_link) {
@@ -393,6 +426,14 @@ export default function Members() {
 
                         {m.role !== 'admin' && (
                           <>
+                            <button
+                              onClick={() => openEditMemberModal(m)}
+                              className="px-2 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-1 shadow-sm"
+                              title="नाम व मोबाइल नंबर बदलें (Admin Only)"
+                            >
+                              <span>✏️</span>
+                            </button>
+
                             <button
                               onClick={() => handleResetPassword(m.id, m.name)}
                               className="px-2 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors flex items-center gap-1 shadow-sm"
@@ -821,6 +862,83 @@ export default function Members() {
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+      {/* Edit Member Details Modal (Admin Only) */}
+      {editMemberModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-blue-100 text-blue-900 border border-blue-200">
+                  👑 ADMIN CONTROL
+                </span>
+                <h2 className="text-xl font-black text-slate-900 mt-1">
+                  सदस्य का विवरण बदलें (Edit Member)
+                </h2>
+                <p className="text-xs text-slate-500">
+                  सदस्य का नाम और मोबाइल नंबर केवल एडमिन बदल सकते हैं
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditMemberModal(null)}
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMemberDetails} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  👤 सदस्य का नाम (Full Name) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="input font-semibold"
+                  placeholder="उदा. Md Nejam Ansari"
+                  value={editMemberName}
+                  onChange={e => setEditMemberName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  📱 मोबाइल नंबर (Mobile Number) *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  className="input font-mono font-semibold"
+                  placeholder="10 अंकों का मोबाइल नंबर"
+                  value={editMemberPhone}
+                  onChange={e => setEditMemberPhone(e.target.value)}
+                />
+                <p className="text-[11px] text-amber-700 font-medium mt-1">
+                  ⚠️ मोबाइल नंबर बदलते ही सदस्य को नए नंबर से लॉगिन करना होगा।
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditMemberModal(null)}
+                  className="flex-1 py-3 rounded-xl border border-gray-300 font-bold text-sm text-gray-700 hover:bg-gray-50 transition-all"
+                >
+                  रद्द करें (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMemberDetails}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md transition-all disabled:opacity-50"
+                >
+                  {savingMemberDetails ? '⏳ सेव हो रहा है...' : '💾 विवरण सेव करें'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -158,31 +158,44 @@ router.put('/profile', authMiddleware, upload.single('photo'), async (req, res) 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User nahi mila.' });
 
-  // If changing phone, check uniqueness
-  if (phone && phone !== user.phone) {
+  const isAdmin = user.role === 'admin';
+
+  // SECURITY RULE: Regular members CANNOT change their Name or Phone number!
+  if (!isAdmin) {
+    if (name && name.trim() !== user.name.trim()) {
+      return res.status(403).json({ error: 'सुरक्षा नियम: सदस्य अपना नाम खुद नहीं बदल सकते। नाम केवल एडमिन (MD NEJAM ANSARI) बदल सकते हैं।' });
+    }
+    if (phone && phone.trim() !== user.phone.trim()) {
+      return res.status(403).json({ error: 'सुरक्षा नियम: सदस्य अपना मोबाइल नंबर खुद नहीं बदल सकते। नंबर केवल एडमिन (MD NEJAM ANSARI) बदल सकते हैं।' });
+    }
+  }
+
+  // If changing phone (Admin only), check uniqueness
+  if (isAdmin && phone && phone !== user.phone) {
     const existing = db.prepare('SELECT id FROM users WHERE phone = ? AND id != ?').get(phone, user.id);
     if (existing) {
       return res.status(400).json({ error: 'Yeh phone number kisi aur ke pass registered hai.' });
     }
   }
 
-  // If changing password, verify current password
+  // If changing password, MUST verify current password!
   let newHashed = user.password;
   if (new_password) {
     if (new_password.length < 6) {
       return res.status(400).json({ error: 'Naya password kam se kam 6 characters ka hona chahiye.' });
     }
-    if (current_password) {
-      const valid = bcrypt.compareSync(current_password, user.password);
-      if (!valid) {
-        return res.status(400).json({ error: 'Purana password galat hai.' });
-      }
+    if (!current_password) {
+      return res.status(400).json({ error: 'पासवर्ड बदलने के लिए पुराना पासवर्ड दर्ज करना अनिवार्य है।' });
+    }
+    const valid = bcrypt.compareSync(current_password, user.password);
+    if (!valid) {
+      return res.status(400).json({ error: 'पुराना पासवर्ड गलत है!' });
     }
     newHashed = bcrypt.hashSync(new_password, 10);
   }
 
-  const updatedName = name || user.name;
-  const updatedPhone = phone || user.phone;
+  const updatedName = isAdmin ? (name || user.name) : user.name;
+  const updatedPhone = isAdmin ? (phone || user.phone) : user.phone;
   const updatedEmail = email !== undefined ? email : user.email;
   const photoUrl = req.file ? `/uploads/${req.file.filename}` : user.profile_photo;
   const updatedHint = security_hint !== undefined ? (security_hint ? security_hint.trim() : null) : user.security_hint;
@@ -264,19 +277,10 @@ router.post('/forgot-password', async (req, res) => {
     }
 
   } else {
-    // Regular member: verify registered name matches
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'रजिस्टर्ड नाम दर्ज करना ज़रूरी है।' });
-    }
-    const enteredName = name.trim().toLowerCase();
-    const dbName = user.name.trim().toLowerCase();
-    const isMatch = dbName === enteredName || dbName.includes(enteredName) || enteredName.includes(dbName);
-    
-    if (!isMatch) {
-      return res.status(400).json({ 
-        error: 'दर्ज किया गया नाम रजिस्टर्ड नाम से मैच नहीं कर रहा है। कृपया सही नाम दर्ज करें।' 
-      });
-    }
+    // SECURITY RULE: Regular members cannot reset password by themselves! Only Admin can reset member passwords!
+    return res.status(403).json({ 
+      error: 'सुरक्षा कारणों से सदस्य अपना पासवर्ड खुद रीसेट नहीं कर सकते। अपना पासवर्ड रीसेट करवाने के लिए कृपया मुख्य एडमिन (MD NEJAM ANSARI - 8434776690) से संपर्क करें।' 
+    });
   }
 
   const hashedPassword = bcrypt.hashSync(new_password, 10);

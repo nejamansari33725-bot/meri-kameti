@@ -223,34 +223,57 @@ export default function Profile() {
           <form onSubmit={handleUpdateDetails} className="space-y-4">
             {/* Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                👤 पूरा नाम / Full Name *
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase">
+                  👤 पूरा नाम / Full Name *
+                </label>
+                {user?.role !== 'admin' && (
+                  <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                    🔒 केवल एडमिन बदल सकते हैं
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 required
-                className="input font-semibold"
+                disabled={user?.role !== 'admin'}
+                className={`input font-semibold ${user?.role !== 'admin' ? 'bg-slate-100 text-slate-600 cursor-not-allowed border-dashed' : ''}`}
                 placeholder="उदा. Nizam Ansari"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
               />
+              {user?.role !== 'admin' && (
+                <p className="text-[11px] text-amber-700 font-medium mt-1">
+                  🔒 सुरक्षा नियम: सदस्य अपना नाम खुद नहीं बदल सकते। नाम परिवर्तन हेतु एडमिन (MD NEJAM ANSARI) से संपर्क करें।
+                </p>
+              )}
             </div>
 
             {/* Mobile / Phone */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                📱 मोबाइल नंबर / Mobile Number (Login ID) *
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase">
+                  📱 मोबाइल नंबर / Mobile Number (Login ID) *
+                </label>
+                {user?.role !== 'admin' && (
+                  <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                    🔒 केवल एडमिन बदल सकते हैं
+                  </span>
+                )}
+              </div>
               <input
                 type="tel"
                 required
-                className="input font-mono font-semibold"
+                disabled={user?.role !== 'admin'}
+                className={`input font-mono font-semibold ${user?.role !== 'admin' ? 'bg-slate-100 text-slate-600 cursor-not-allowed border-dashed' : ''}`}
                 placeholder="10 अंकों का मोबाइल नंबर"
                 value={formData.phone}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
               />
               <p className="text-[11px] text-slate-500 mt-1">
-                💡 इसी नंबर से आप Mera Kameti में लॉगिन करते हैं।
+                {user?.role !== 'admin' 
+                  ? '🔒 सुरक्षा नियम: मोबाइल नंबर खाता पहचान है। इसे केवल एडमिन (MD NEJAM ANSARI) बदल सकते हैं।'
+                  : '💡 इसी नंबर से आप Mera Kameti में लॉगिन करते हैं।'}
               </p>
             </div>
 
