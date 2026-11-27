@@ -321,6 +321,7 @@ export default function Login() {
                 </>
               )}
 
+              <div className="pt-2">
                 {/* WhatsApp Help Option */}
                 <a
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Admin Sahab, Mera Kameti me mera password reset kar dijiye. Mera Registered Mobile: ${forgotForm.phone || ''}`)}`}
